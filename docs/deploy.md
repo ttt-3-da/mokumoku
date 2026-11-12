@@ -52,6 +52,10 @@ npx supabase db push
 
 デプロイ後、Supabase の Site URL を Vercel の URL に合わせておきます。
 
+> 速さのために、Vercel のサーバーは Supabase と同じ地域で動かします。リポジトリの `vercel.json` で
+> `"regions": ["sin1"]`（シンガポール）を指定しています。Supabase を別の地域に作った場合は、
+> 近い地域（東京なら `hnd1`）に書き換えてください。
+
 ## 4. 確認
 
 - 新規登録 → ロビー → 部屋をつくる → 入室 → 退室 → 投稿 までできること
