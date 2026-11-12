@@ -1,0 +1,279 @@
+@import "tailwindcss";
+
+:root {
+  --cream: #fbf7ef;
+  --paper: #ffffff;
+  --ink: #3f3a36;
+  --ink-soft: #7a726b;
+  --line: #ece4d8;
+  --sakura: #f4a6b8;
+  --yomogi: #8fb98b;
+  --kinako: #e6c88f;
+  --accent: #e98aa1;
+  --accent-strong: #d76c86;
+}
+
+@theme inline {
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-sakura: var(--sakura);
+  --color-yomogi: var(--yomogi);
+  --color-kinako: var(--kinako);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --font-sans: var(--font-maru), "Hiragino Maru Gothic ProN", "Yu Gothic", sans-serif;
+}
+
+body {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+/* もち（仮）の入室アニメーション：上からぽてっと落ちる */
+@keyframes mochi-drop {
+  0% { transform: translateY(-40px) scale(1, 1); opacity: 0; }
+  60% { transform: translateY(0) scale(1.15, 0.85); opacity: 1; }
+  80% { transform: translateY(-4px) scale(0.95, 1.05); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+.animate-mochi-drop {
+  animation: mochi-drop 0.6s ease-out both;
+}
+
+/* =========================================================
+   もち（src/components/mochi.tsx）のアニメーション
+   すべて transform / opacity だけで動かす
+   ========================================================= */
+.mochi g,
+.mochi path,
+.mochi rect,
+.mochi ellipse,
+.mochi circle,
+.mochi text {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.mochi-jump,
+.mochi-pose,
+.mochi-breathe {
+  transform-origin: 50% 100% !important;
+}
+
+/* 呼吸：わずかに伸び縮み */
+@keyframes mochi-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(1.025, 0.97); }
+}
+.mochi-breathe {
+  animation: mochi-breathe 3.2s ease-in-out infinite;
+  animation-delay: var(--breathe-delay, 0s);
+}
+
+/* 状態ごとの体の形 */
+.mochi-pose { transition: transform 0.6s ease; }
+.mochi-focus .mochi-pose { transform: scale(0.96, 1.05); }
+.mochi-break .mochi-pose { transform: scale(1.06, 0.92); }
+.mochi-away { opacity: 0.6; transition: opacity 0.6s ease; }
+
+/* まばたき（キャラごとに周期とタイミングをずらす） */
+@keyframes mochi-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96% { transform: scaleY(0.1); }
+}
+.mochi-eyes {
+  animation: mochi-blink var(--blink-dur, 4.5s) infinite;
+  animation-delay: var(--blink-delay, 0s);
+}
+
+/* 顔を見合わせる */
+.mochi-look { transition: transform 0.5s ease; }
+.mochi-look-left .mochi-look { transform: translateX(-3px); }
+.mochi-look-right .mochi-look { transform: translateX(3px); }
+
+/* 集中中：ペンでカリカリ */
+@keyframes mochi-scribble {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-1.5px, 1px); }
+  50% { transform: translate(1px, -0.5px); }
+  75% { transform: translate(-1px, 1px); }
+}
+.mochi-pen { animation: mochi-scribble 0.5s linear infinite; }
+
+/* 集中中：ときどき「…！」 */
+@keyframes mochi-bang {
+  0%, 86%, 100% { opacity: 0; transform: scale(0.6); }
+  89%, 97% { opacity: 1; transform: scale(1); }
+}
+.mochi-bang {
+  opacity: 0;
+  animation: mochi-bang 9s ease-out infinite;
+  animation-delay: var(--bang-delay, 0s);
+}
+
+/* 休憩中：お茶を飲む */
+@keyframes mochi-sip {
+  0%, 70%, 100% { transform: translateY(0); }
+  78%, 92% { transform: translateY(-5px); }
+}
+.mochi-cup { animation: mochi-sip 6s ease-in-out infinite; }
+
+/* 湯気 */
+@keyframes mochi-steam {
+  0% { opacity: 0; transform: translateY(3px); }
+  35% { opacity: 0.9; }
+  100% { opacity: 0; transform: translateY(-7px); }
+}
+.mochi-steam { animation: mochi-steam 2.4s ease-out infinite; }
+.mochi-steam-2 { animation-delay: 0.8s; }
+.mochi-steam-3 { animation-delay: 1.6s; }
+
+/* 離席中：zzz */
+@keyframes mochi-zzz {
+  0% { opacity: 0; transform: translate(0, 4px) scale(0.7); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate(6px, -10px) scale(1.1); }
+}
+.mochi-zzz { animation: mochi-zzz 3s ease-out infinite; }
+.mochi-zzz-2 { animation-delay: 1.5s; }
+
+/* ポモドーロ完了・スタンプ受信：ぴょんと跳ねる */
+@keyframes mochi-jump {
+  0% { transform: translateY(0) scale(1, 1); }
+  15% { transform: translateY(0) scale(1.1, 0.88); }
+  40% { transform: translateY(-22px) scale(0.94, 1.08); }
+  65% { transform: translateY(0) scale(1.08, 0.92); }
+  80% { transform: translateY(0) scale(0.98, 1.02); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.mochi-celebrate .mochi-jump { animation: mochi-jump 0.9s ease-in-out 2; }
+.mochi-hop .mochi-jump { animation: mochi-jump 0.6s ease-in-out 1; }
+
+@keyframes mochi-heart {
+  0% { opacity: 0; transform: translateY(6px) scale(0.6); }
+  20% { opacity: 1; transform: translateY(0) scale(1.15); }
+  100% { opacity: 0; transform: translateY(-14px) scale(1); }
+}
+.mochi-heart { animation: mochi-heart 1.2s ease-out forwards; }
+
+@keyframes mochi-confetti {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0deg); }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)); }
+}
+.mochi-confetti { animation: mochi-confetti 1.4s ease-out forwards; }
+
+/* 退室：手を振ってふわっと消える */
+@keyframes mochi-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-30deg); }
+  75% { transform: rotate(25deg); }
+}
+.mochi-wave { animation: mochi-wave 0.45s ease-in-out 3; }
+
+@keyframes mochi-leave {
+  0%, 55% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-14px) scale(0.9); }
+}
+.mochi-leaving { animation: mochi-leave 1.4s ease-in forwards; }
+
+/* ---------------------------------------------------------
+   エモート（体の動きは .mochi-jump、記号は .mochi-emote-icon）
+   --------------------------------------------------------- */
+@keyframes emote-sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+@keyframes emote-bow {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  25%, 70% { transform: translateY(6px) scale(1.07, 0.82); }
+}
+@keyframes emote-nod {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px) scale(1.02, 0.95); }
+}
+@keyframes emote-stretch {
+  0%, 100% { transform: scale(1, 1); }
+  30%, 70% { transform: scale(0.9, 1.18); }
+}
+@keyframes emote-doze {
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes emote-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-1.5px); }
+  75% { transform: translateX(1.5px); }
+}
+@keyframes emote-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+@keyframes emote-icon {
+  0% { opacity: 0; transform: translateY(4px) scale(0.5); }
+  15% { opacity: 1; transform: translateY(0) scale(1.15); }
+  25%, 85% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-4px) scale(1); }
+}
+@keyframes emote-drip {
+  0% { opacity: 0; transform: translateY(-4px); }
+  20%, 80% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(10px); }
+}
+@keyframes emote-flicker {
+  0%, 100% { transform: scale(1) rotate(-3deg); }
+  50% { transform: scale(1.12) rotate(3deg); }
+}
+
+.mochi-emote-wave .mochi-jump { animation: emote-sway 0.6s ease-in-out 4; }
+.mochi-emote-wave .mochi-wave { animation-iteration-count: 5; }
+.mochi-emote-bow .mochi-jump { animation: emote-bow 2.4s ease-in-out 1; }
+.mochi-emote-nod .mochi-jump { animation: emote-nod 0.45s ease-in-out 3; }
+.mochi-emote-joy .mochi-jump { animation: mochi-jump 0.8s ease-in-out 3; }
+.mochi-emote-stretch .mochi-jump { animation: emote-stretch 2.4s ease-in-out 1; }
+.mochi-emote-doze .mochi-jump { animation: emote-doze 1.3s ease-in-out 2; }
+.mochi-emote-idea .mochi-jump { animation: mochi-jump 0.6s ease-in-out 1; }
+.mochi-emote-sweat .mochi-jump { animation: emote-shake 0.12s linear 10; }
+.mochi-emote-fire .mochi-jump { animation: emote-pulse 0.4s ease-in-out 6; }
+
+.mochi-emote-icon { animation: emote-icon 2.6s ease-out forwards; }
+.mochi-emote-drip { animation: emote-drip 1.3s ease-in 2; }
+.mochi-emote-flicker { animation: emote-icon 2.6s ease-out forwards, emote-flicker 0.3s ease-in-out infinite; }
+
+/* 部屋全員がそろってジャンプ */
+.group-jump .mochi-jump { animation: mochi-jump 0.9s ease-in-out 2; }
+
+/* スタンプが飛ぶ（横は等速、縦は放物線） */
+@keyframes stamp-x {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--stamp-dx)); }
+}
+@keyframes stamp-y {
+  0% { transform: translateY(0) scale(0.8); animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1); }
+  50% { transform: translateY(var(--stamp-peak)) scale(1.3); animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4); }
+  100% { transform: translateY(var(--stamp-dy)) scale(1); }
+}
+@keyframes stamp-fade {
+  0%, 85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.stamp-flight-x { animation: stamp-x 0.9s linear forwards, stamp-fade 0.9s linear forwards; }
+.stamp-flight-y { animation: stamp-y 0.9s forwards; }
+
+/* 非表示のタブや画面外ではアニメーションを止める */
+.anim-paused,
+.anim-paused * {
+  animation-play-state: paused !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
