@@ -70,3 +70,22 @@ export const getUnlocks = cache(async (userId: string): Promise<string[]> => {
   const { data } = await supabase.from("unlocks").select("item_id").eq("user_id", userId);
   return (data ?? []).map((r) => r.item_id as string);
 });
+
+export type Wallet = { coins: number; owned: string[] };
+
+/** 自分のコインの残高と、買ったものの一覧 */
+export const getWallet = cache(async (): Promise<Wallet> => {
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("my_wallet");
+  const w = (data ?? {}) as Partial<Wallet>;
+  return { coins: typeof w.coins === "number" ? w.coins : 0, owned: Array.isArray(w.owned) ? w.owned : [] };
+});
+
+export type ShopItem = { item_id: string; kind: string; price: number; currency: "coin" | "tomato"; sort_order: number; released_at: string };
+
+/** ショップの品物の一覧（値段は DB で管理する） */
+export const getShopItems = cache(async (): Promise<ShopItem[]> => {
+  const supabase = await createClient();
+  const { data } = await supabase.from("shop_items").select("item_id, kind, price, currency, sort_order, released_at");
+  return (data ?? []) as ShopItem[];
+});

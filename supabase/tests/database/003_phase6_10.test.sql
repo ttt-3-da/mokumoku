@@ -27,13 +27,13 @@ select is((select color from public.avatars where user_id = '00000000-0000-0000-
   'サインアップでデフォルトのもちが作られる');
 
 select pg_temp.login('00000000-0000-0000-0000-0000000001b2');
-select is((public.save_avatar('yuzu', 'glasses', 'smile', 'orange', 'ribbon', 'none', 'red')) ->> 'color', 'yuzu',
+select is((public.save_avatar('sakura', 'glasses', 'smile', 'orange', 'ribbon', 'none', 'red')) ->> 'color', 'sakura',
   '解放不要のパーツは保存できる');
-select throws_ok($$ select public.save_avatar('yuzu', 'dot', 'smile', 'none', 'leaf', 'none', 'red') $$,
+select throws_ok($$ select public.save_avatar('sakura', 'dot', 'smile', 'none', 'leaf', 'none', 'red') $$,
   'P0001', 'item_locked', '解放していない頭の小物は使えない');
-select throws_ok($$ select public.save_avatar('yuzu', 'dot', 'smile', 'none', 'none', 'mug', 'red') $$,
+select throws_ok($$ select public.save_avatar('sakura', 'dot', 'smile', 'none', 'none', 'mug', 'red') $$,
   'P0001', 'item_locked', '解放していない机の小物は使えない');
-select throws_ok($$ select public.save_avatar('rainbow', 'dot', 'smile', 'none', 'none', 'none', 'red') $$,
+select throws_ok($$ select public.save_avatar('nosuchcolor', 'dot', 'smile', 'none', 'none', 'none', 'red') $$,
   'P0001', 'invalid_avatar', '存在しない色は保存できない');
 select throws_ok($$ update public.avatars set head = 'crown' where user_id = '00000000-0000-0000-0000-0000000001b2' $$,
   '42501', null, 'avatars を直接更新できない');
@@ -43,7 +43,7 @@ select pg_temp.logout();
 
 insert into public.unlocks (user_id, item_id) values ('00000000-0000-0000-0000-0000000001b2', 'desk:mug');
 select pg_temp.login('00000000-0000-0000-0000-0000000001b2');
-select is((public.save_avatar('yuzu', 'dot', 'smile', 'none', 'none', 'mug', 'red')) ->> 'desk', 'mug',
+select is((public.save_avatar('sakura', 'dot', 'smile', 'none', 'none', 'mug', 'red')) ->> 'desk', 'mug',
   '解放したアイテムは使える');
 
 -- ---------------------------------------------------------------- フェーズ8：招待・承認

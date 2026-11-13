@@ -40,11 +40,17 @@ const PREVIEW_STATES: { state: MochiState; label: string }[] = [
 export function AvatarEditor({
   initial,
   unlocked,
+  owned,
+  prices,
   seed,
   username,
 }: {
   initial: Avatar;
   unlocked: string[];
+  /** 買ったショップの品物（item_id） */
+  owned: string[];
+  /** ショップの品物の値段（item_id → コイン） */
+  prices: Record<string, number>;
   seed: string;
   username: string;
 }) {
@@ -54,6 +60,7 @@ export function AvatarEditor({
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
   const unlockedSet = useMemo(() => new Set(unlocked), [unlocked]);
+  const ownedSet = useMemo(() => new Set(owned), [owned]);
   const dirty = (Object.keys(avatar) as PartKey[]).some((k) => avatar[k] !== saved[k]);
 
   function choose(key: PartKey, value: string) {
@@ -121,9 +128,20 @@ export function AvatarEditor({
       <div className="flex flex-col gap-4">
         {SECTIONS.map((section) => (
           <Card key={section.key}>
-            <h2 className="mb-3 text-sm font-bold">{section.title}</h2>
+            <h2 className="mb-3 flex items-baseline text-sm font-bold">
+              {section.title}
+              {section.key === "color" && (
+                <Link href="/shop" className="ml-auto text-xs font-normal text-ink-soft hover:underline">
+                  🪙 ほかの色はショップで →
+                </Link>
+              )}
+            </h2>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2">
               {Object.entries(section.options).map(([value, label]) => {
+                // ショップの品物は、買ったものだけ並べる（ほかはショップで試着・購入）
+                const shopId = `${section.key}:${value}`;
+                const forSale = prices[shopId] !== undefined;
+                if (forSale && !ownedSet.has(shopId)) return null;
                 const id =
                   section.key === "head" || section.key === "desk" || section.key === "hachimaki"
                     ? itemId(section.key, value)

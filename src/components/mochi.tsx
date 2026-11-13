@@ -1,5 +1,5 @@
 import { useId, type CSSProperties } from "react";
-import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar } from "@/lib/avatar";
+import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type ColorDef } from "@/lib/avatar";
 import type { EmoteId } from "@/lib/emotes";
 
 /**
@@ -71,6 +71,9 @@ export function Mochi({
 }: MochiProps) {
   const uid = useId().replace(/:/g, "");
   const color = COLORS[avatar.color] ?? COLORS.shiro;
+  // 暗い体の色では、目や口を明るい色で描く
+  const ink = color.dark ? "#fff8ec" : INK;
+  const bodyFill = color.paint ? `url(#paint-${uid})` : color.fill;
   const away = state === "away";
   const focus = state === "focus";
   const onBreak = state === "break";
@@ -117,6 +120,7 @@ export function Mochi({
     <div className={classes} style={vars} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
       <svg viewBox="0 0 100 100" width={size} height={size} overflow="visible">
         <defs>
+          {color.paint && <BodyPaint id={`paint-${uid}`} paint={color.paint} />}
           <clipPath id={`body-${uid}`}>
             <ellipse cx="50" cy="62" rx="34" ry="28" />
           </clipPath>
@@ -129,7 +133,14 @@ export function Mochi({
           <g className="mochi-pose">
             <g className="mochi-breathe">
               {/* 体 */}
-              <ellipse cx="50" cy="62" rx="34" ry="28" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
+              <ellipse cx="50" cy="62" rx="34" ry="28" fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
+              {color.shine && (
+                // きんいろ：左上に光の反射
+                <g fill="#fff" clipPath={`url(#body-${uid})`}>
+                  <ellipse cx="34" cy="44" rx="10" ry="4.5" opacity="0.6" transform="rotate(-25 34 44)" />
+                  <circle cx="45" cy="40" r="2" opacity="0.7" />
+                </g>
+              )}
 
               {/* 集中中はハチマキ */}
               {focus && (
@@ -158,11 +169,11 @@ export function Mochi({
               {/* 目（外側のグループで向き、内側でまばたき） */}
               <g className="mochi-look">
                 <g className={away ? undefined : "mochi-eyes"}>
-                  <Eyes kind={eyes} />
+                  <Eyes kind={eyes} ink={ink} />
                 </g>
               </g>
 
-              <Mouth kind={avatar.mouth} />
+              <Mouth kind={avatar.mouth} ink={ink} />
 
               <HeadItem kind={avatar.head} />
 
@@ -250,8 +261,8 @@ export function Mochi({
   );
 }
 
-function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
-  const line = { fill: "none", stroke: INK, strokeWidth: STROKE, strokeLinecap: "round" as const };
+function Eyes({ kind, ink = INK }: { kind: Avatar["eyes"] | "closed"; ink?: string }) {
+  const line = { fill: "none", stroke: ink, strokeWidth: STROKE, strokeLinecap: "round" as const };
   switch (kind) {
     case "closed":
       return (
@@ -272,8 +283,8 @@ function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
         <g {...line}>
           <path d={`M${EYE_L - 4.5} ${EYE_Y} h9`} />
           <path d={`M${EYE_R - 4.5} ${EYE_Y} h9`} />
-          <circle cx={EYE_L} cy={EYE_Y + 1.8} r="1.6" fill={INK} stroke="none" />
-          <circle cx={EYE_R} cy={EYE_Y + 1.8} r="1.6" fill={INK} stroke="none" />
+          <circle cx={EYE_L} cy={EYE_Y + 1.8} r="1.6" fill={ink} stroke="none" />
+          <circle cx={EYE_R} cy={EYE_Y + 1.8} r="1.6" fill={ink} stroke="none" />
         </g>
       );
     case "sparkle":
@@ -281,7 +292,7 @@ function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
         <g>
           {[EYE_L, EYE_R].map((x) => (
             <g key={x}>
-              <circle cx={x} cy={EYE_Y} r="4.4" fill={INK} />
+              <circle cx={x} cy={EYE_Y} r="4.4" fill={ink} />
               <circle cx={x - 1.4} cy={EYE_Y - 1.5} r="1.6" fill="#fff" />
               <circle cx={x + 1.5} cy={EYE_Y + 1.6} r="0.8" fill="#fff" />
             </g>
@@ -291,8 +302,8 @@ function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
     case "glasses":
       return (
         <g>
-          <circle cx={EYE_L} cy={EYE_Y} r="3" fill={INK} />
-          <circle cx={EYE_R} cy={EYE_Y} r="3" fill={INK} />
+          <circle cx={EYE_L} cy={EYE_Y} r="3" fill={ink} />
+          <circle cx={EYE_R} cy={EYE_Y} r="3" fill={ink} />
           <g {...line}>
             <circle cx={EYE_L} cy={EYE_Y} r="7.5" />
             <circle cx={EYE_R} cy={EYE_Y} r="7.5" />
@@ -303,7 +314,7 @@ function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
     case "dot":
     default:
       return (
-        <g fill={INK}>
+        <g fill={ink}>
           <circle cx={EYE_L} cy={EYE_Y} r="3.4" />
           <circle cx={EYE_R} cy={EYE_Y} r="3.4" />
         </g>
@@ -311,11 +322,11 @@ function Eyes({ kind }: { kind: Avatar["eyes"] | "closed" }) {
   }
 }
 
-function Mouth({ kind }: { kind: Avatar["mouth"] }) {
-  const line = { fill: "none", stroke: INK, strokeWidth: STROKE, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+function Mouth({ kind, ink = INK }: { kind: Avatar["mouth"]; ink?: string }) {
+  const line = { fill: "none", stroke: ink, strokeWidth: STROKE, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (kind) {
     case "small":
-      return <circle cx="50" cy="69" r="2.2" fill={INK} />;
+      return <circle cx="50" cy="69" r="2.2" fill={ink} />;
     case "smile":
       return <path d="M45 67 q5 5 10 0" {...line} />;
     case "frown":
@@ -445,4 +456,18 @@ function EmoteMark({ emote }: { emote: EmoteId }) {
     default:
       return null;
   }
+}
+/** 体の塗り分け。bands は上から等分の色の帯、gradient はなめらかなグラデーション */
+function BodyPaint({ id, paint }: { id: string; paint: NonNullable<ColorDef["paint"]> }) {
+  const n = paint.stops.length;
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+      {paint.kind === "gradient"
+        ? paint.stops.map((c, i) => <stop key={i} offset={n === 1 ? 0 : i / (n - 1)} stopColor={c} />)
+        : paint.stops.flatMap((c, i) => [
+            <stop key={`${i}a`} offset={i / n} stopColor={c} />,
+            <stop key={`${i}b`} offset={(i + 1) / n} stopColor={c} />,
+          ])}
+    </linearGradient>
+  );
 }

@@ -11,6 +11,9 @@ export const ROOM_THEMES = {
 
 export type RoomTheme = keyof typeof ROOM_THEMES;
 
+/** 無料のテーマ（ほかは部屋にたまる🍅で買う） */
+export const FREE_THEMES: readonly RoomTheme[] = ["library", "cafe"];
+
 export function parseTheme(v: unknown): RoomTheme {
   return typeof v === "string" && Object.hasOwn(ROOM_THEMES, v) ? (v as RoomTheme) : "library";
 }

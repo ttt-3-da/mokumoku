@@ -3,16 +3,112 @@
  * 画像は保存せず、パーツIDだけを保存して表示時に SVG を組み立てる。
  */
 
-export const COLORS = {
+/** 体の色の定義。paint があると上下の色違い（bands）やグラデーション（gradient）で塗る */
+export type ColorDef = {
+  label: string;
+  /** 単色のときの色。塗り分けのときも、手などの小さな部分はこの色 */
+  fill: string;
+  edge: string;
+  paint?: { kind: "bands" | "gradient"; stops: readonly string[] };
+  /** 光の反射を描く（きんいろ） */
+  shine?: boolean;
+  /** 体が暗い色なので、目や口を明るい色で描く */
+  dark?: boolean;
+};
+
+const colorDefs = {
+  // 無料
   shiro: { label: "白もち", fill: "#fffdf7", edge: "#e6d9c6" },
   sakura: { label: "さくら", fill: "#ffd6df", edge: "#eeaabb" },
   yomogi: { label: "よもぎ", fill: "#bfdcab", edge: "#93bd86" },
+  // ここから有料（値段は DB の shop_items）
   kinako: { label: "きなこ", fill: "#f2d7a0", edge: "#d8b06c" },
   goma: { label: "ごま", fill: "#9b958d", edge: "#77716a" },
   ramune: { label: "ラムネ", fill: "#c4e6f4", edge: "#8ec6de" },
   yuzu: { label: "ゆず", fill: "#ffe680", edge: "#e6c54a" },
   murasakiimo: { label: "むらさきいも", fill: "#cdb7e6", edge: "#a88dcb" },
-} as const;
+  milk: { label: "ミルク", fill: "#fff6e6", edge: "#ead8bd" },
+  zunda: { label: "ずんだ", fill: "#cfe59a", edge: "#a8c66d" },
+  kuri: { label: "くり", fill: "#e3b26e", edge: "#c18c45" },
+  mikan: { label: "みかん", fill: "#ffbe73", edge: "#e89a45" },
+  houjicha: { label: "ほうじ茶", fill: "#c9a07e", edge: "#a67b5a" },
+  momo: { label: "もも", fill: "#ffd0cc", edge: "#eba7a1" },
+  lemon: { label: "レモン", fill: "#fff3a3", edge: "#e6d062" },
+  anko: { label: "あんこ", fill: "#9c6b6b", edge: "#7a4d4d", dark: true },
+  soda: { label: "ソーダ", fill: "#a8def5", edge: "#7cc2e0" },
+  budou: { label: "ぶどう", fill: "#c5b0e6", edge: "#9f86c9" },
+  matcha: { label: "抹茶", fill: "#a3bf7f", edge: "#7f9c5c" },
+  ichigo: { label: "いちご", fill: "#ffa8b5", edge: "#e8808f" },
+  choco: { label: "チョコ", fill: "#9a6e52", edge: "#77503a", dark: true },
+  mint: { label: "ミント", fill: "#bdf0dc", edge: "#8fd1b8" },
+  caramel: { label: "キャラメル", fill: "#e8b47a", edge: "#c99052" },
+  blueberry: { label: "ブルーベリー", fill: "#9faee6", edge: "#7787c9" },
+  hiyoko: { label: "ひよこ", fill: "#ffe48f", edge: "#e6c55c" },
+  warabi: { label: "わらび", fill: "#e3d6b3", edge: "#c4b48c" },
+  kuromitsu: { label: "くろみつ", fill: "#6e5644", edge: "#50392b", dark: true },
+  suika: { label: "すいか", fill: "#ff9494", edge: "#e86b6b" },
+  yozora: { label: "よぞら", fill: "#5a6199", edge: "#434a80", dark: true },
+  yuki: { label: "ゆき", fill: "#f2f7ff", edge: "#cfdcf0" },
+  ichigodaifuku: {
+    label: "いちご大福",
+    fill: "#fffdf7",
+    edge: "#eebac2",
+    paint: { kind: "bands", stops: ["#fffdf7", "#ffa8b5"] },
+  },
+  sanshokudango: {
+    label: "三色だんご",
+    fill: "#fffdf7",
+    edge: "#d9c9b0",
+    paint: { kind: "bands", stops: ["#ffd6df", "#fffdf7", "#bfdcab"] },
+  },
+  creamsoda: {
+    label: "クリームソーダ",
+    fill: "#fffdf7",
+    edge: "#88c98a",
+    paint: { kind: "bands", stops: ["#fffdf7", "#9ee0a0"] },
+  },
+  purin: {
+    label: "プリン",
+    fill: "#ffe9a3",
+    edge: "#d7b06b",
+    paint: { kind: "bands", stops: ["#c98a3e", "#ffe9a3", "#ffe9a3"] },
+  },
+  yuuyake: {
+    label: "ゆうやけ",
+    fill: "#f0a9a0",
+    edge: "#b8909e",
+    paint: { kind: "gradient", stops: ["#ffb36b", "#f59a9a", "#c39be0"] },
+  },
+  rainbow: {
+    label: "レインボー",
+    fill: "#fff19a",
+    edge: "#c9b8d8",
+    paint: { kind: "bands", stops: ["#ff9aa2", "#ffc785", "#fff19a", "#b5ead7", "#a0d2f0", "#c7b3ec"] },
+  },
+  aurora: {
+    label: "オーロラ",
+    fill: "#9fd6f5",
+    edge: "#9fb8d8",
+    paint: { kind: "gradient", stops: ["#b8f2d0", "#9fd6f5", "#c8b4f0"] },
+  },
+  kiniro: {
+    label: "きんいろ",
+    fill: "#f2c94c",
+    edge: "#c9962a",
+    paint: { kind: "gradient", stops: ["#fff1a8", "#f2c94c", "#d9a531"] },
+    shine: true,
+  },
+} satisfies Record<string, ColorDef>;
+
+export const COLORS: Record<keyof typeof colorDefs, ColorDef> = colorDefs;
+
+/** 無料の色（それ以外はショップで買う） */
+export const FREE_COLORS: readonly AvatarColor[] = ["shiro", "sakura", "yomogi"];
+
+/** ショップの品物ID（DB の shop_items.item_id） */
+export function shopItemId(kind: "color", value: string): string {
+  return `${kind}:${value}`;
+}
 
 export const EYES = {
   dot: "点",

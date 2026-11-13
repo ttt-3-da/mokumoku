@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient, requireProfile } from "@/lib/supabase/server";
+import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { NavLinks } from "./nav-links";
 
@@ -7,6 +7,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireProfile();
   const { data: unread } = await (await createClient()).rpc("count_unread_notifications");
   const unreadCount = typeof unread === "number" ? unread : 0;
+  const wallet = await getWallet();
 
   return (
     <>
@@ -17,8 +18,15 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           </Link>
           <NavLinks username={profile.username} />
           <Link
+            href="/shop"
+            className="ml-auto shrink-0 rounded-full bg-paper px-2.5 py-1 text-sm font-bold tabular-nums shadow-sm hover:bg-sakura/20"
+            aria-label={`所持コイン ${wallet.coins}枚（ショップへ）`}
+          >
+            🪙 {wallet.coins}
+          </Link>
+          <Link
             href="/notifications"
-            className="relative ml-auto shrink-0 rounded-full px-2.5 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
+            className="relative shrink-0 rounded-full px-2.5 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
             aria-label={unreadCount > 0 ? `お知らせ（未読${unreadCount}件）` : "お知らせ"}
           >
             📬

@@ -57,3 +57,12 @@ values
   ('d1000000-0000-0000-0000-000000000002', 'd0000000-0000-0000-0000-00000000000b',
    'もくもくカフェ', 'タイマーなしで自由に。', '☕', '{プログラミング}', 'free', 25, 5, 'cafe')
 on conflict (id) do nothing;
+
+-- ショップ：デモユーザーは試せるようにコインを多めに持たせ、きなこは「きなこ色」を持っていることにする
+insert into public.owned_items (user_id, item_id) values
+  ('d0000000-0000-0000-0000-00000000000b', 'color:kinako')
+on conflict do nothing;
+insert into public.coin_transactions (user_id, amount, reason, detail)
+select u, 300, 'study', 'seed'
+from unnest(array['d0000000-0000-0000-0000-00000000000a', 'd0000000-0000-0000-0000-00000000000b']::uuid[]) as u
+where not exists (select 1 from public.coin_transactions where user_id = u and detail = 'seed');

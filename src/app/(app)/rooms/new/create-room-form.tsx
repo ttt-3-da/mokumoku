@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Button, Card, Field, inputClass } from "@/components/ui";
-import { ROOM_THEMES } from "@/lib/room-theme";
+import { FREE_THEMES, ROOM_THEMES } from "@/lib/room-theme";
 import { ROOM_ICONS } from "@/lib/validation";
 import { createRoom, type CreateRoomState } from "./actions";
 
@@ -92,7 +92,7 @@ export function CreateRoomForm() {
         <fieldset>
           <legend className="mb-1.5 text-sm font-bold">部屋のテーマ</legend>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {Object.entries(ROOM_THEMES).map(([value, t], i) => (
+            {FREE_THEMES.map((value, i) => ({ value, t: ROOM_THEMES[value], i })).map(({ value, t, i }) => (
               <RadioCard key={value} name="theme" value={value} defaultChecked={i === 0} label={`${t.icon} ${t.label}`} hint="" />
             ))}
           </div>

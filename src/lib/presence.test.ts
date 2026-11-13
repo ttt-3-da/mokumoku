@@ -38,7 +38,7 @@ describe("flattenPresence", () => {
   });
 
   it("アバターが壊れていてもデフォルトのもちで表示する", () => {
-    const state = { u1: [{ ...meta({}), avatar: { color: "rainbow", eyes: "smile" } }] };
+    const state = { u1: [{ ...meta({}), avatar: { color: "nosuchcolor", eyes: "smile" } }] };
     const [m] = flattenPresence(state as Record<string, unknown[]>);
     expect(m.avatar).toEqual({ ...DEFAULT_AVATAR, eyes: "smile" });
   });

@@ -112,7 +112,7 @@ select is((select count(*)::int from jsonb_array_elements((public.get_profile_st
   'タグ別の時間は、部屋のタグで等分する');
 
 -- ---------------------------------------------------------------- テーマ
-select lives_ok($$ update public.rooms set theme = 'space' where id = '30000000-0000-0000-0000-000000000001' $$,
+select lives_ok($$ update public.rooms set theme = 'cafe' where id = '30000000-0000-0000-0000-000000000001' $$,
   'オーナーはテーマを変えられる');
 
 select * from finish();

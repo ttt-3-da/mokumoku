@@ -34,11 +34,14 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
   const session = data as StudySession;
   if (!session.ended_at) redirect(`/rooms/${session.room_id}/live`);
 
-  const [{ data: room }, avatar, { data: unlockRows }] = await Promise.all([
+  const [{ data: room }, avatar, { data: unlockRows }, { data: coinRows }] = await Promise.all([
     supabase.from("rooms").select("name, icon, timer_mode").eq("id", session.room_id).maybeSingle(),
     getAvatar(me.id),
     supabase.from("unlocks").select("item_id").eq("user_id", me.id).eq("session_id", session.id),
+    supabase.from("coin_transactions").select("amount, reason, detail").eq("session_id", session.id),
   ]);
+  const coins = (coinRows ?? []) as { amount: number; reason: string; detail: string | null }[];
+  const coinTotal = coins.reduce((s, c) => s + c.amount, 0);
   const unlocked = (unlockRows ?? []).map((r) => r.item_id as string).filter((x): x is UnlockItemId => x in UNLOCK_ITEM_LABEL);
 
   // DB の session_minutes と同じ計算（切り捨て）
@@ -98,6 +101,22 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
           </div>
         </dl>
       </Card>
+
+      {coinTotal > 0 && (
+        <Card className="w-full text-center">
+          <p className="text-2xl font-bold tabular-nums">🪙 +{coinTotal}</p>
+          <ul className="mt-1 flex flex-wrap justify-center gap-x-3 text-xs text-ink-soft">
+            {coins.map((c, i) => (
+              <li key={i}>
+                {c.reason === "study" ? "勉強" : c.reason === "pomodoro" ? "ポモドーロ" : `連続${c.detail?.split(":")[1] ?? ""}日ボーナス`} +{c.amount}
+              </li>
+            ))}
+          </ul>
+          <ButtonLink href="/shop" variant="ghost" className="mt-2">
+            ショップをのぞく
+          </ButtonLink>
+        </Card>
+      )}
 
       {minutes >= 1 ? (
         <Card className="w-full">

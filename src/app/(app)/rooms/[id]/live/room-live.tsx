@@ -415,8 +415,8 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
   }
 
   async function changeTheme(next: RoomTheme): Promise<string | null> {
-    const { error } = await createClient().from("rooms").update({ theme: next }).eq("id", room.id);
-    if (error) return "テーマを変更できませんでした";
+    const { error } = await createClient().rpc("set_room_theme", { p_room_id: room.id, p_theme: next });
+    if (error) return rpcErrorMessage(error);
     setTheme(next);
     await sendModeration(me.id, "role"); // ほかの人の画面も取り直す
     return null;

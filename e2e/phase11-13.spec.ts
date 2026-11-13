@@ -14,18 +14,18 @@ test("オーナーがキックすると、相手は記録画面へ移動する�
   const guest = await (await browser.newContext()).newPage();
   owner.on("dialog", (d) => void d.accept());
 
-  // 宇宙テーマの部屋を作って入室
+  // カフェのテーマの部屋を作って入室
   await signUp(owner, undefined, "キックするもち");
   await owner.goto("/rooms/new");
-  await owner.getByLabel("部屋名").fill(`宇宙部屋 ${Date.now()}`);
-  await owner.locator('input[name="theme"][value="space"]').check({ force: true });
+  await owner.getByLabel("部屋名").fill(`カフェ部屋 ${Date.now()}`);
+  await owner.locator('input[name="theme"][value="cafe"]').check({ force: true });
   await owner.getByRole("button", { name: "部屋をつくる" }).click();
   await expect(owner).toHaveURL(/\/rooms\/[0-9a-f-]{36}$/);
   const entryUrl = owner.url();
   await owner.getByLabel("今からやること").fill("見守り");
   await owner.getByRole("button", { name: "入室する" }).click();
   await expect(owner.getByText("● 接続中")).toBeVisible({ timeout: 15_000 });
-  await expect(owner.getByText(/🚀 宇宙・(朝|昼|夕方|夜)/)).toBeVisible();
+  await expect(owner.getByText(/☕ カフェ・(朝|昼|夕方|夜)/)).toBeVisible();
 
   await signUp(guest, undefined, "キックされるもち");
   await guest.goto(entryUrl);

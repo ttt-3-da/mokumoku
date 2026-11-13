@@ -33,7 +33,7 @@ export async function createRoom(_prev: CreateRoomState, formData: FormData): Pr
     .select("id")
     .single();
 
-  if (error?.message === "ng_word") return { error: rpcErrorMessage(error) };
+  if (error?.message === "ng_word" || error?.message === "theme_locked") return { error: rpcErrorMessage(error) };
   if (error || !data) return { error: "部屋を作成できませんでした" };
   redirect(`/rooms/${data.id}`);
 }

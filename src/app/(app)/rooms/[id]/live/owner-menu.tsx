@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { parseAvatar, type Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/client";
-import { ROOM_THEMES, type RoomTheme } from "@/lib/room-theme";
+import { FREE_THEMES, ROOM_THEMES, type RoomTheme } from "@/lib/room-theme";
 import type { Room } from "@/lib/types";
 
 type Pending = { user_id: string; username: string; display_name: string; requested_at: string; avatar: Avatar };
@@ -39,7 +39,7 @@ export function OwnerMenu({
       <InviteLink code={room.invite_code} />
       {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
       {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
-      {isOwner && <ThemePicker theme={theme} onChange={onChangeTheme} />}
+      <ThemePicker roomId={room.id} theme={theme} onChange={onChangeTheme} />
       <Bans roomId={room.id} />
       <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
       <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
@@ -169,23 +169,85 @@ function PendingRequests({ roomId }: { roomId: string }) {
   );
 }
 
-function ThemePicker({ theme, onChange }: { theme: RoomTheme; onChange: (t: RoomTheme) => Promise<string | null> }) {
+type ThemeShop = { tomatoes: number; owned: string[]; items: { theme: string; price: number }[] };
+
+/**
+ * 部屋のテーマ（オーナー・モデレーター）。図書館とカフェは無料、ほかは部屋にたまった🍅で買う。
+ * 🍅は、その部屋でのみんなの勉強時間25分で1個たまる
+ */
+function ThemePicker({
+  roomId,
+  theme,
+  onChange,
+}: {
+  roomId: string;
+  theme: RoomTheme;
+  onChange: (t: RoomTheme) => Promise<string | null>;
+}) {
+  const [shop, setShop] = useState<ThemeShop | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    const { data } = await createClient().rpc("room_theme_shop", { p_room_id: roomId });
+    if (data) setShop(data as ThemeShop);
+  }, [roomId]);
+
+  useEffect(() => {
+    const t = setTimeout(() => void load(), 0);
+    return () => clearTimeout(t);
+  }, [load]);
+
+  const priceOf = (id: string) => shop?.items.find((i) => i.theme === id)?.price;
+  const available = (id: string) => FREE_THEMES.includes(id as RoomTheme) || (shop?.owned.includes(id) ?? false);
+
+  async function buy(id: RoomTheme, price: number) {
+    if (!window.confirm(`「${ROOM_THEMES[id].label}」を、部屋の🍅${price}で買いますか？（返品はできません）`)) return;
+    setBusy(true);
+    setError(null);
+    const { error } = await createClient().rpc("buy_room_theme", { p_room_id: roomId, p_theme: id });
+    if (error) setError(rpcErrorMessage(error));
+    await load();
+    setBusy(false);
+  }
+
   return (
     <div className="flex flex-col gap-1">
-      <span className="font-bold">部屋のテーマ</span>
+      <span className="flex items-baseline gap-2 font-bold">
+        部屋のテーマ
+        {shop && <span className="text-xs font-normal text-ink-soft">この部屋の🍅 {shop.tomatoes}（みんなの勉強25分で1個）</span>}
+      </span>
       <div className="flex flex-wrap gap-2" role="group" aria-label="部屋のテーマ">
-        {(Object.entries(ROOM_THEMES) as [RoomTheme, (typeof ROOM_THEMES)[RoomTheme]][]).map(([id, t]) => (
-          <button
-            key={id}
-            type="button"
-            aria-pressed={theme === id}
-            onClick={async () => setError(await onChange(id))}
-            className={`rounded-full px-3 py-1 text-xs ${theme === id ? "bg-ink text-paper" : "bg-paper hover:bg-sakura/20"}`}
-          >
-            {t.icon} {t.label}
-          </button>
-        ))}
+        {(Object.entries(ROOM_THEMES) as [RoomTheme, (typeof ROOM_THEMES)[RoomTheme]][]).map(([id, t]) => {
+          const price = priceOf(id);
+          if (available(id)) {
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={theme === id}
+                disabled={busy}
+                onClick={async () => setError(await onChange(id))}
+                className={`rounded-full px-3 py-1 text-xs ${theme === id ? "bg-ink text-paper" : "bg-paper hover:bg-sakura/20"}`}
+              >
+                {t.icon} {t.label}
+              </button>
+            );
+          }
+          const short = price !== undefined && shop !== null && shop.tomatoes < price;
+          return (
+            <button
+              key={id}
+              type="button"
+              disabled={busy || price === undefined || short}
+              onClick={() => price !== undefined && buy(id, price)}
+              title={short ? `あと🍅${price! - shop!.tomatoes}で買えます` : undefined}
+              className="rounded-full border border-dashed border-line bg-paper px-3 py-1 text-xs text-ink-soft hover:bg-sakura/10 disabled:opacity-50"
+            >
+              {t.icon} {t.label} 🍅{price ?? "…"}
+            </button>
+          );
+        })}
       </div>
       {error && (
         <p role="alert" className="text-xs text-red-600">
