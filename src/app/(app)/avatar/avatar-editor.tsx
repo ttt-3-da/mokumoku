@@ -130,9 +130,9 @@ export function AvatarEditor({
           <Card key={section.key}>
             <h2 className="mb-3 flex items-baseline text-sm font-bold">
               {section.title}
-              {section.key === "color" && (
+              {(section.key === "color" || section.key === "eyes" || section.key === "mouth" || section.key === "cheeks") && (
                 <Link href="/shop" className="ml-auto text-xs font-normal text-ink-soft hover:underline">
-                  🪙 ほかの色はショップで →
+                  🪙 ほかはショップで →
                 </Link>
               )}
             </h2>

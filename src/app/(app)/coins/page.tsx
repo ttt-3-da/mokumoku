@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { ButtonLink, Card } from "@/components/ui";
-import { COLORS, type AvatarColor } from "@/lib/avatar";
+import { parseShopItem } from "@/lib/avatar";
 import { createClient, getWallet } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "コイン" };
@@ -21,8 +21,7 @@ function describe(r: Row): string {
     case "streak":
       return `連続${r.detail?.split(":")[1] ?? ""}日ボーナス`;
     case "purchase": {
-      const [kind, id] = (r.detail ?? "").split(":");
-      const name = kind === "color" && id in COLORS ? COLORS[id as AvatarColor].label : (r.detail ?? "");
+      const name = parseShopItem(r.detail ?? "")?.label ?? (r.detail ?? "");
       return `「${name}」を買った`;
     }
     default:

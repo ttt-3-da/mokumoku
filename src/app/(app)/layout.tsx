@@ -12,7 +12,8 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-line bg-cream/90 backdrop-blur">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3">
+        {/* スマホではメニューを2行目に回して、横にはみ出さないようにする */}
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
           <Link href="/lobby" className="text-lg font-bold tracking-wide">
             Mokumoku
           </Link>

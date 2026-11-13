@@ -33,3 +33,33 @@ test("登録ボーナスのコインで色を買って、着られる。足り�
   await expect(page.getByText("「ミント」を買った")).toBeVisible();
   await expect(page.getByText("登録ボーナス")).toBeVisible();
 });
+
+test("目・口・ほっぺのタブでも試着して買える", async ({ page }) => {
+  page.on("dialog", (d) => void d.accept());
+  await signUp(page, undefined, "かおもち");
+  await page.goto("/shop");
+  await page.getByRole("tab", { name: "目", exact: true }).click();
+  await page.getByRole("button", { name: /ハート/ }).click();
+  await page.getByRole("button", { name: "🪙25 で買う" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "「ハート」を買いました！" })).toBeVisible();
+  await page.getByRole("button", { name: "これを着る" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "着がえました！" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "ほっぺ", exact: true }).click();
+  await expect(page.getByRole("button", { name: /にじ/ })).toBeVisible();
+  await page.getByRole("tab", { name: "口", exact: true }).click();
+  await expect(page.getByRole("button", { name: /カイゼルひげ/ })).toBeVisible();
+
+  await page.goto("/avatar");
+  await expect(page.getByRole("button", { name: "ハート", exact: true }).first()).toHaveAttribute("aria-pressed", "true");
+});
+
+test("スマホの幅でも、ページが横にはみ出さない", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 800 });
+  await signUp(page, undefined, "すまほもち");
+  for (const path of ["/lobby", "/shop", "/settings", "/timeline"]) {
+    await page.goto(path);
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    expect(overflow, `${path} が横にはみ出している`).toBeLessThanOrEqual(0);
+  }
+});

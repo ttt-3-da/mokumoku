@@ -58,6 +58,13 @@ body {
   transform-origin: center;
 }
 
+/* ショップのパーツで transform 属性（rotate など）を使うものは、SVG 本来の基準点で動かす */
+.mochi .mp-fixed,
+.mochi .mp-fixed * {
+  transform-box: view-box;
+  transform-origin: 0 0;
+}
+
 .mochi-jump,
 .mochi-pose,
 .mochi-breathe {

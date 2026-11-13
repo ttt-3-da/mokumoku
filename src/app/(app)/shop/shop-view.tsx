@@ -5,21 +5,21 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Mochi } from "@/components/mochi";
 import { Button, Card } from "@/components/ui";
-import { COLORS, type Avatar, type AvatarColor } from "@/lib/avatar";
+import { parseShopItem, type Avatar, type ShopPart } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { coinsShort, parseShopSort, SHOP_SORTS, sortShopItems, type ShopSort } from "@/lib/shop";
 import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, Wallet } from "@/lib/supabase/server";
 import { saveAvatar } from "../avatar/actions";
 
-/** 種類のタブ。色以外は2回目以降に追加する */
-const CATEGORIES = [
-  { kind: "color", label: "体の色", ready: true },
-  { kind: "eyes", label: "目", ready: false },
-  { kind: "mouth", label: "口", ready: false },
-  { kind: "cheeks", label: "ほっぺ", ready: false },
-  { kind: "accessory", label: "アクセサリー", ready: false },
-] as const;
+/** 種類のタブ。アクセサリーは3回目に追加する */
+const CATEGORIES: { kind: ShopPart | "accessory"; label: string; free: string; ready: boolean }[] = [
+  { kind: "color", label: "体の色", free: "白もち・さくら・よもぎ", ready: true },
+  { kind: "eyes", label: "目", free: "点・にっこり・キラキラ・ねむそう・メガネ付き", ready: true },
+  { kind: "mouth", label: "口", free: "ω・小さな丸・にっこり・への字", ready: true },
+  { kind: "cheeks", label: "ほっぺ", free: "なし・ピンク・オレンジ", ready: true },
+  { kind: "accessory", label: "アクセサリー", free: "", ready: false },
+];
 
 const SORT_KEY = "mokumoku:shop-sort";
 
@@ -37,6 +37,7 @@ export function ShopView({
   const router = useRouter();
   const [wallet, setWallet] = useState(initialWallet);
   const [wearing, setWearing] = useState(avatar);
+  const [kind, setKind] = useState<ShopPart>("color");
   const [selected, setSelected] = useState<string | null>(null);
   const [sort, setSort] = useState<ShopSort>("recommended");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -55,13 +56,20 @@ export function ShopView({
   }, []);
 
   const owned = useMemo(() => new Set(wallet.owned), [wallet.owned]);
-  const colorItems = useMemo(
-    () => sortShopItems(items.filter((i) => i.kind === "color" && i.item_id.slice(6) in COLORS), owned, sort),
-    [items, owned, sort],
+  const shown = useMemo(
+    () =>
+      sortShopItems(
+        items.filter((i) => i.kind === kind && parseShopItem(i.item_id) !== null),
+        owned,
+        sort,
+      ),
+    [items, kind, owned, sort],
   );
-  const selectedItem = colorItems.find((i) => i.item_id === selected) ?? null;
-  const selectedColor = selectedItem ? (selectedItem.item_id.slice(6) as AvatarColor) : null;
-  const preview: Avatar = selectedColor ? { ...wearing, color: selectedColor } : wearing;
+  const selectedItem = shown.find((i) => i.item_id === selected) ?? null;
+  const selectedPart = selectedItem ? parseShopItem(selectedItem.item_id)! : null;
+  const withPart = (a: Avatar, part: ShopPart, value: string) => ({ ...a, [part]: value }) as Avatar;
+  const preview = selectedPart ? withPart(wearing, selectedPart.part, selectedPart.value) : wearing;
+  const category = CATEGORIES.find((c) => c.kind === kind)!;
 
   function changeSort(v: ShopSort) {
     setSort(v);
@@ -72,10 +80,15 @@ export function ShopView({
     }
   }
 
+  function changeKind(k: ShopPart) {
+    setKind(k);
+    setSelected(null);
+    setMessage(null);
+  }
+
   function buy() {
-    if (!selectedItem) return;
-    const name = COLORS[selectedColor!].label;
-    if (!window.confirm(`「${name}」を 🪙${selectedItem.price} で買いますか？（返品はできません）`)) return;
+    if (!selectedItem || !selectedPart) return;
+    if (!window.confirm(`「${selectedPart.label}」を 🪙${selectedItem.price} で買いますか？（返品はできません）`)) return;
     setMessage(null);
     startTransition(async () => {
       const { data, error } = await createClient().rpc("buy_item", { p_item_id: selectedItem.item_id });
@@ -84,16 +97,16 @@ export function ShopView({
         return;
       }
       setWallet((w) => ({ coins: typeof data === "number" ? data : w.coins - selectedItem.price, owned: [...w.owned, selectedItem.item_id] }));
-      setMessage({ ok: true, text: `「${name}」を買いました！` });
+      setMessage({ ok: true, text: `「${selectedPart.label}」を買いました！` });
       router.refresh(); // ヘッダーのコインを更新
     });
   }
 
   function wear() {
-    if (!selectedColor) return;
+    if (!selectedPart) return;
     setMessage(null);
     startTransition(async () => {
-      const res = await saveAvatar({ ...wearing, color: selectedColor });
+      const res = await saveAvatar(withPart(wearing, selectedPart.part, selectedPart.value));
       if (res.error || !res.avatar) {
         setMessage({ ok: false, text: res.error ?? "着がえられませんでした" });
         return;
@@ -122,11 +135,11 @@ export function ShopView({
         {/* 試着 */}
         <Card className="flex flex-col items-center gap-3 md:sticky md:top-20">
           <Mochi avatar={preview} size={140} seed={seed} label="試着中のもち" />
-          {selectedItem ? (
+          {selectedItem && selectedPart ? (
             <>
-              <p className="text-center font-bold">{COLORS[selectedColor!].label}</p>
+              <p className="text-center font-bold">{selectedPart.label}</p>
               {owned.has(selectedItem.item_id) ? (
-                wearing.color === selectedColor ? (
+                wearing[selectedPart.part] === selectedPart.value ? (
                   <p className="text-sm text-ink-soft">着ています</p>
                 ) : (
                   <Button onClick={wear} disabled={pending} className="w-full">
@@ -162,11 +175,12 @@ export function ShopView({
                   key={c.kind}
                   type="button"
                   role="tab"
-                  aria-selected={c.kind === "color"}
+                  aria-selected={c.kind === kind}
                   disabled={!c.ready}
                   title={c.ready ? undefined : "近日追加"}
+                  onClick={() => c.ready && c.kind !== "accessory" && changeKind(c.kind)}
                   className={`rounded-full px-3 py-1 text-sm ${
-                    c.kind === "color" ? "bg-ink font-bold text-paper" : "bg-paper text-ink-soft disabled:opacity-50"
+                    c.kind === kind ? "bg-ink font-bold text-paper" : "bg-paper hover:bg-sakura/20 disabled:opacity-50 disabled:hover:bg-paper"
                   }`}
                 >
                   {c.label}
@@ -191,8 +205,8 @@ export function ShopView({
           </div>
 
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(104px,1fr))] gap-2">
-            {colorItems.map((item) => {
-              const color = item.item_id.slice(6) as AvatarColor;
+            {shown.map((item) => {
+              const part = parseShopItem(item.item_id)!;
               const has = owned.has(item.item_id);
               const isSelected = item.item_id === selected;
               return (
@@ -209,9 +223,9 @@ export function ShopView({
                     }`}
                   >
                     <span className="anim-paused">
-                      <Mochi avatar={{ ...wearing, color }} size={52} seed={`shop-${color}`} />
+                      <Mochi avatar={withPart(wearing, part.part, part.value)} size={kind === "color" ? 52 : 60} seed={`shop-${item.item_id}`} />
                     </span>
-                    <span className="font-bold leading-tight">{COLORS[color].label}</span>
+                    <span className="font-bold leading-tight">{part.label}</span>
                     {has ? (
                       <span className="rounded-full bg-yomogi/25 px-2 text-[11px] text-green-800">持っている</span>
                     ) : (
@@ -222,7 +236,7 @@ export function ShopView({
               );
             })}
           </ul>
-          <p className="text-xs text-ink-soft">白もち・さくら・よもぎは無料で、着せかえからいつでも選べます。</p>
+          <p className="text-xs text-ink-soft">{category.free} は無料で、着せかえからいつでも選べます。</p>
         </div>
       </div>
     </div>

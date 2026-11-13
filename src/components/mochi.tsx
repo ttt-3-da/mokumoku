@@ -1,6 +1,7 @@
 import { useId, type CSSProperties } from "react";
 import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type ColorDef } from "@/lib/avatar";
 import type { EmoteId } from "@/lib/emotes";
+import { EXTRA_CHEEKS, EXTRA_EYES, EXTRA_MOUTHS, ExtraCheeks, ExtraEyes, ExtraMouth } from "./mochi-parts";
 
 /**
  * アバター「もち」。パーツごとにレイヤーを分けた SVG で、動きはすべて CSS（transform / opacity）。
@@ -89,7 +90,8 @@ export function Mochi({
     "--breathe-delay": `${(seededRandom(seed, 4) * -3).toFixed(2)}s`,
   } as CSSProperties;
 
-  const cheek = hot ? "#ff6b6b" : CHEEK_COLOR[avatar.cheeks];
+  // 連続集中2時間超は、どのほっぺでも赤くする
+  const cheek = hot ? "#ff6b6b" : avatar.cheeks in CHEEK_COLOR ? CHEEK_COLOR[avatar.cheeks as keyof typeof CHEEK_COLOR] : null;
   const emoteEyes =
     emote === "bow" || emote === "doze" || emote === "nod"
       ? "closed"
@@ -159,17 +161,19 @@ export function Mochi({
               )}
 
               {/* ほっぺ */}
-              {cheek && (
+              {cheek ? (
                 <g fill={cheek} opacity={hot ? 0.8 : 0.65}>
                   <ellipse cx="29" cy="68" rx="5.5" ry="3.4" />
                   <ellipse cx="71" cy="68" rx="5.5" ry="3.4" />
                 </g>
+              ) : (
+                EXTRA_CHEEKS.has(avatar.cheeks) && <ExtraCheeks kind={avatar.cheeks} ink={ink} uid={uid} />
               )}
 
               {/* 目（外側のグループで向き、内側でまばたき） */}
               <g className="mochi-look">
                 <g className={away ? undefined : "mochi-eyes"}>
-                  <Eyes kind={eyes} ink={ink} />
+                  <Eyes kind={eyes} ink={ink} uid={uid} />
                 </g>
               </g>
 
@@ -261,7 +265,8 @@ export function Mochi({
   );
 }
 
-function Eyes({ kind, ink = INK }: { kind: Avatar["eyes"] | "closed"; ink?: string }) {
+function Eyes({ kind, ink = INK, uid = "" }: { kind: Avatar["eyes"] | "closed"; ink?: string; uid?: string }) {
+  if (EXTRA_EYES.has(kind)) return <ExtraEyes kind={kind} ink={ink} uid={uid} />;
   const line = { fill: "none", stroke: ink, strokeWidth: STROKE, strokeLinecap: "round" as const };
   switch (kind) {
     case "closed":
@@ -323,6 +328,7 @@ function Eyes({ kind, ink = INK }: { kind: Avatar["eyes"] | "closed"; ink?: stri
 }
 
 function Mouth({ kind, ink = INK }: { kind: Avatar["mouth"]; ink?: string }) {
+  if (EXTRA_MOUTHS.has(kind)) return <ExtraMouth kind={kind} ink={ink} />;
   const line = { fill: "none", stroke: ink, strokeWidth: STROKE, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
   switch (kind) {
     case "small":

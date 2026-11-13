@@ -14,7 +14,7 @@ export function NavLinks({ username }: { username: string }) {
     { href: "/settings", label: "設定" },
   ];
   return (
-    <nav className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap">
+    <nav className="-mx-1 flex min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap max-sm:order-last max-sm:w-full">
       {links.map((l) => {
         const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
         return (

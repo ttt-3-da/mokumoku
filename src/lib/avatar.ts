@@ -116,6 +116,37 @@ export const EYES = {
   sparkle: "キラキラ",
   sleepy: "ねむそう",
   glasses: "メガネ付き",
+  // ここから有料（値段は DB の shop_items）
+  chibi: "ちび点",
+  tare: "たれ目",
+  tsuri: "つり目",
+  manmaru: "まんまる",
+  hoso: "ほそ目",
+  hohoemi: "ほほえみ",
+  jito: "ジト目",
+  usagi: "うさぎ目",
+  wink: "ウインク",
+  bikkuri: "びっくり",
+  gyu: "＞＜",
+  toron: "とろん",
+  uruuru: "うるうる",
+  guruguru: "ぐるぐる",
+  shiitake: "しいたけ",
+  kiri: "きりっ",
+  komari: "こまり",
+  oko: "おこ",
+  namida: "なみだ",
+  heart: "ハート",
+  star: "ほし",
+  neko: "ねこ目",
+  pacchiri: "ぱっちり",
+  marumegane: "まるメガネ",
+  sunglasses: "サングラス",
+  monocle: "片メガネ",
+  shoujo: "少女まんが",
+  goggles: "ゴーグル",
+  diamond: "ダイヤ",
+  nijiiro: "にじいろの瞳",
 } as const;
 
 export const MOUTHS = {
@@ -123,12 +154,74 @@ export const MOUTHS = {
   small: "小さな丸",
   smile: "にっこり",
   frown: "への字",
+  // ここから有料（値段は DB の shop_items）
+  ni: "にっ",
+  ho: "ほっ",
+  musu: "むすっ",
+  pokan: "ぽかん",
+  unya: "うにゃ",
+  niyari: "にやり",
+  shobon: "しょぼん",
+  puku: "ぷくっ",
+  pero: "ぺろっ",
+  chu: "ちゅー",
+  waai: "わーい",
+  akubi: "あくび",
+  mogumogu: "もぐもぐ",
+  gaan: "がーん",
+  giza: "ギザギザ",
+  kiba: "きば",
+  usagi: "うさぎ",
+  fuu: "ふーっ",
+  ahiru: "アヒル口",
+  nikko: "にこっ",
+  tehe: "てへっ",
+  nekoguchi: "ねこ口",
+  chobihige: "ちょびひげ",
+  mask: "マスク",
+  kaiser: "カイゼルひげ",
+  oshaburi: "おしゃぶり",
+  pan: "くわえパン",
+  hana: "くわえ花",
+  kira: "キラッ",
+  heart: "ハートの口",
 } as const;
 
 export const CHEEKS = {
   none: "なし",
   pink: "ピンク",
   orange: "オレンジ",
+  // ここから有料（値段は DB の shop_items）
+  usupink: "うすピンク",
+  aka: "あか",
+  mizuiro: "みずいろ",
+  murasaki: "むらさき",
+  midori: "みどり",
+  kiiro: "きいろ",
+  chiisai: "ちいさい丸",
+  hokuro: "ほくろ",
+  ookii: "大きいもも色",
+  tate: "たて長",
+  yoko: "よこ長",
+  tere: "てれ",
+  sobakasu: "そばかす",
+  fuwa: "ふわっと",
+  guruguru: "ぐるぐる",
+  shizuku: "しずく",
+  ase: "汗",
+  star: "星",
+  bandage: "ばんそうこう",
+  nekohige: "ねこひげ",
+  happa: "葉っぱ",
+  oko: "おこマーク",
+  heart: "ハート",
+  kirakira: "キラキラ",
+  sakura: "さくらの花びら",
+  yuki: "雪の結晶",
+  onpu: "音符",
+  ichigo: "いちご",
+  sticker: "星のシール",
+  niji: "にじ",
 } as const;
 
 export const HEAD_ITEMS = {
@@ -250,4 +343,22 @@ export function heatLevel(focusMinutes: number): 0 | 1 | 2 {
   if (focusMinutes > 120) return 2;
   if (focusMinutes > 60) return 1;
   return 0;
+}
+
+/** ショップで売っているもちのパーツの種類（DB の shop_items.kind） */
+export type ShopPart = "color" | "eyes" | "mouth" | "cheeks";
+
+const PART_LABELS: Record<ShopPart, Record<string, string>> = {
+  color: Object.fromEntries(Object.entries(COLORS).map(([k, v]) => [k, v.label])),
+  eyes: EYES,
+  mouth: MOUTHS,
+  cheeks: CHEEKS,
+};
+
+/** 'eyes:heart' → { part: 'eyes', value: 'heart', label: 'ハート' }。知らない品物は null */
+export function parseShopItem(itemId: string): { part: ShopPart; value: string; label: string } | null {
+  const [part, value] = itemId.split(":");
+  if (!(part in PART_LABELS)) return null;
+  const label = PART_LABELS[part as ShopPart][value];
+  return label ? { part: part as ShopPart, value, label } : null;
 }
