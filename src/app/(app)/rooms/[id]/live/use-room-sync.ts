@@ -36,7 +36,7 @@ export const HEARTBEAT_MS = 60_000;
 type HeartbeatResult = { session_id: string; room_id: string; timer_started_at: string | null };
 
 /**
- * 60秒ごとにハートビートを送る（タブが非表示でも送る。離席中も学習時間に含めるため）。
+ * 60秒ごとにハートビートを送る（タブが非表示でも送る。ほかのタブを見ている間も学習時間に含めるため）。
  * ブラウザを閉じるとハートビートが止まり、3分後に cron がセッションを閉じる。
  * - task が変わったらすぐに送って DB にも保存する
  * - セッションがもう閉じられていたら onLost を呼ぶ

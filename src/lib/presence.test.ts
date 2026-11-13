@@ -45,12 +45,9 @@ describe("flattenPresence", () => {
 });
 
 describe("resolveStatus", () => {
-  it("タブが非表示なら離席中", () => {
-    expect(resolveStatus({ hidden: true, timerPhase: "break" })).toBe("away");
-  });
-  it("休憩フェーズなら休憩中、それ以外は集中中", () => {
-    expect(resolveStatus({ hidden: false, timerPhase: "break" })).toBe("break");
-    expect(resolveStatus({ hidden: false, timerPhase: "focus" })).toBe("focus");
-    expect(resolveStatus({ hidden: false, timerPhase: "idle" })).toBe("focus");
+  it("休憩フェーズなら休憩中、それ以外は集中中（タブを離れても離席中にはしない）", () => {
+    expect(resolveStatus({ timerPhase: "break" })).toBe("break");
+    expect(resolveStatus({ timerPhase: "focus" })).toBe("focus");
+    expect(resolveStatus({ timerPhase: "idle" })).toBe("focus");
   });
 });

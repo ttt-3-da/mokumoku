@@ -35,7 +35,6 @@ const PREVIEW_STATES: { state: MochiState; label: string }[] = [
   { state: "idle", label: "ふつう" },
   { state: "focus", label: "集中中" },
   { state: "break", label: "休憩中" },
-  { state: "away", label: "離席中" },
 ];
 
 export function AvatarEditor({

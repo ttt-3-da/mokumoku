@@ -121,7 +121,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
     room.timer_mode === "pomodoro" && now !== null
       ? computeTimer(timerStartedAt, room.focus_minutes, room.break_minutes, now)
       : { kind: "idle" };
-  const status = resolveStatus({ hidden, timerPhase: timer.kind });
+  const status = resolveStatus({ timerPhase: timer.kind });
 
   // ---------------------------------------------------------------- スタンプ
   const seatsRef = useRef<HTMLDivElement>(null);

@@ -45,18 +45,10 @@ function isPresenceMeta(v: unknown): v is PresenceMeta {
 }
 
 /**
- * 表示する状態を決める。
- * - タブが非表示なら「離席中」
- * - ポモドーロの休憩中なら「休憩中」、それ以外は「集中中」
+ * 表示する状態を決める。ポモドーロの休憩中なら「休憩中」、それ以外は「集中中」。
+ * タブを離れても自動で「離席中」にはしない（別のタブで調べものをしながら勉強する人も多いため）。
  */
-export function resolveStatus({
-  hidden,
-  timerPhase,
-}: {
-  hidden: boolean;
-  timerPhase: "focus" | "break" | "idle";
-}): PresenceStatus {
-  if (hidden) return "away";
+export function resolveStatus({ timerPhase }: { timerPhase: "focus" | "break" | "idle" }): PresenceStatus {
   return timerPhase === "break" ? "break" : "focus";
 }
 
