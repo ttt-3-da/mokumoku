@@ -10,6 +10,8 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
+  // 2つのブラウザで登録・入室するテストは、並列実行中だと30秒（初期値）を超えることがある
+  timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {
     baseURL: "http://localhost:3100",

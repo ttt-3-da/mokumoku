@@ -45,6 +45,7 @@ type Handlers = {
 export function useRoomChannel({ roomId, self, handlers }: { roomId: string; self: Self; handlers: Handlers }) {
   const [members, setMembers] = useState<PresenceMeta[]>([]);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
+  const [reconnectKey, setReconnectKey] = useState(0);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const metaRef = useRef<PresenceMeta | null>(null);
   const handlersRef = useRef(handlers);
@@ -108,7 +109,32 @@ export function useRoomChannel({ roomId, self, handlers }: { roomId: string; sel
       channelRef.current = null;
       void supabase.removeChannel(channel);
     };
-  }, [roomId, self.userId]);
+  }, [roomId, self.userId, reconnectKey]);
+
+  // タブに戻ってきたとき：トークンを最新にして、つながっていれば在室を伝え直す。
+  // 切れたままならチャンネルを作り直す（上の effect が reconnectKey で走り直す）
+  useEffect(() => {
+    async function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      const channel = channelRef.current;
+      await createClient().realtime.setAuth();
+      if (channel && channel.state === "joined") {
+        if (metaRef.current) {
+          metaRef.current = { ...metaRef.current, updatedAt: Date.now() };
+          void channel.track(metaRef.current);
+        }
+      } else if (channel && channel.state !== "joining") {
+        setConnection("connecting");
+        setReconnectKey((k) => k + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, []);
 
   // 状態・今やること・アバター・ストップウォッチが変わったら track し直す
   const { userId, displayName, task, status, joinedAt, avatar, stopwatch, plantLevel } = self;

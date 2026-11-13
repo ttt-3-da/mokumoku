@@ -104,15 +104,30 @@ export function useHeartbeat({
     if (taskChanged) void beat(task);
 
     const id = setInterval(() => void beat(null), HEARTBEAT_MS);
+    // 見ていないタブではタイマーが間引かれるので、戻ってきたらすぐ1回送る
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void beat(null);
+    };
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       stopped = true;
       clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [task, userId, enabled]);
 }
 
-/** 今のブラウザのログインユーザーが、この画面を開いたユーザーと同じか */
+/**
+ * 今のブラウザのログインユーザーが、この画面を開いたユーザーと同じか。
+ * タブに戻った直後などでログイン情報がまだ読めないとき（null）は「同じ」とみなす
+ * （はっきり別のユーザーのときだけ false。誤って部屋の画面を止めないため）。
+ */
 export async function sameAccount(userId: string): Promise<boolean> {
-  const { data } = await createClient().auth.getClaims();
-  return data?.claims?.sub === userId;
+  try {
+    const { data } = await createClient().auth.getClaims();
+    const sub = data?.claims?.sub;
+    return !sub || sub === userId;
+  } catch {
+    return true;
+  }
 }
