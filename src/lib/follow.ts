@@ -24,13 +24,20 @@ export type LeaderRow = { username: string; display_name: string; avatar: Avatar
 /** list_notifications の1行 */
 export type NotificationRow = {
   id: string;
-  kind: "follow";
+  kind: "follow" | "badge" | "schedule";
   created_at: string;
   read_at: string | null;
-  actor_username: string;
-  actor_display_name: string;
-  actor_avatar: Avatar;
+  /** フォローのお知らせだけ入る */
+  actor_username: string | null;
+  actor_display_name: string | null;
+  actor_avatar: Avatar | null;
   is_following: boolean;
+  /** 定例の部屋のお知らせだけ入る */
+  room_id: string | null;
+  room_name: string | null;
+  room_icon: string | null;
+  /** バッジの ID */
+  detail: string | null;
 };
 
 /** ランキングのバーの長さ（いちばん多い人を100%、0分でも見えるよう最低2%） */

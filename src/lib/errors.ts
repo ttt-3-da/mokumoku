@@ -27,6 +27,7 @@ const MESSAGES: Record<string, string> = {
   item_locked: "まだ解放されていないアイテムです",
   invalid_avatar: "選べないパーツが含まれています",
   forbidden: "この操作はオーナー・モデレーターだけができます",
+  invalid_schedule: "定例の曜日と時刻を確かめてください",
   request_not_found: "申請が見つかりません（取り下げられたか、すでに処理されています）",
   not_pomodoro_room: "この部屋はポモドーロモードではありません",
   ng_word: "部屋名か説明文に使えない言葉が含まれています",

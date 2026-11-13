@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { usernameToEmail } from "@/lib/auth/username-email";
 import { rpcErrorMessage } from "@/lib/errors";
 import { createClient, requireProfile } from "@/lib/supabase/server";
+import { parseGoalHours } from "@/lib/goals";
 import { validateBio, validateDisplayName, validatePassword } from "@/lib/validation";
 
 export type FormState = { error?: string; saved?: boolean };
@@ -39,6 +40,20 @@ export async function updateVisibility(_prev: FormState, formData: FormData): Pr
     .from("profiles")
     .update({ is_public: isPublic, stats_public: statsPublic })
     .eq("id", me.id);
+  if (error) return { error: "保存できませんでした" };
+
+  revalidatePath("/", "layout");
+  return { saved: true };
+}
+
+/** 週の目標 */
+export async function updateGoal(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireProfile();
+  const goal = parseGoalHours(String(formData.get("weekly_goal") ?? ""));
+  if (!goal.ok) return { error: goal.error };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ weekly_goal_minutes: goal.value }).eq("id", me.id);
   if (error) return { error: "保存できませんでした" };
 
   revalidatePath("/", "layout");

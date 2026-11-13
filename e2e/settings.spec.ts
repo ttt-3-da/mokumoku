@@ -20,7 +20,7 @@ test("自己紹介を書いて検索で見つかる。非公開にすると見�
 
   // 非公開にすると、検索にも出ずプロフィールも開けない
   await a.getByLabel("プロフィールを公開する").uncheck();
-  await a.getByRole("button", { name: "保存する" }).nth(1).click();
+  await a.getByRole("button", { name: "保存する" }).nth(2).click(); // プロフィール・週の目標・公開範囲 の順
   await expect(a.getByRole("status").filter({ hasText: "保存しました" }).nth(1)).toBeVisible();
 
   await b.goto(`/users?q=${name}`);

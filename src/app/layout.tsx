@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
+import { COLOR_SCHEME_SCRIPT } from "@/lib/color-scheme";
 import "./globals.css";
 
 const maru = Zen_Maru_Gothic({
@@ -16,7 +17,11 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="ja" className={`${maru.variable} h-full antialiased`}>
+    // data-theme は描画前のスクリプトで付けるので、サーバーの HTML と食い違っても警告しない
+    <html lang="ja" className={`${maru.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: COLOR_SCHEME_SCRIPT }} />
+      </head>
       <body className="min-h-full flex flex-col font-sans">{children}</body>
     </html>
   );

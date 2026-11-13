@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
-import { NavLinks } from "./nav-links";
+import { MobileMenu, NavLinks } from "./nav-links";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireProfile();
@@ -12,8 +12,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
   return (
     <>
       <header className="sticky top-0 z-20 border-b border-line bg-cream/90 backdrop-blur">
-        {/* スマホではメニューを2行目に回して、横にはみ出さないようにする */}
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+        {/* スマホ（縦持ち）では ☰ から左にメニューを出す */}
+        <div className="mx-auto flex max-w-5xl items-center gap-x-3 px-4 py-2 sm:gap-x-4 sm:py-3">
+          <MobileMenu username={profile.username} />
           <Link href="/lobby" className="text-lg font-bold tracking-wide">
             Mokumoku
           </Link>

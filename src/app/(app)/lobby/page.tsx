@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FollowingActivity } from "@/components/following-activity";
+import { LastWeekCard, UpcomingSchedules, type UpcomingSchedule } from "@/components/lobby-extras";
+import { WeeklyGoalBar } from "@/components/weekly-goal";
+import { isMondayInJapan, parseLastWeekSummary, parseWeeklyProgress } from "@/lib/goals";
 import { RoomCard } from "@/components/room-card";
 import { parseAvatar } from "@/lib/avatar";
 import type { FollowingActivity as FollowingActivityRow } from "@/lib/follow";
@@ -20,11 +23,19 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const tag = param(sp.tag).slice(0, 15);
 
   const supabase = await createClient();
-  const [publicRes, mineRes, activityRes] = await Promise.all([
+  const now = new Date();
+  const monday = isMondayInJapan(now);
+  const [publicRes, mineRes, activityRes, progressRes, upcomingRes, summaryRes] = await Promise.all([
     supabase.rpc("list_public_rooms", { p_query: q || null, p_tag: tag || null }),
     supabase.rpc("list_my_rooms"),
     supabase.rpc("list_following_activity"),
+    supabase.rpc("get_weekly_progress"),
+    supabase.rpc("list_upcoming_schedules"),
+    monday ? supabase.rpc("last_week_summary") : Promise.resolve({ data: null }),
   ]);
+  const progress = parseWeeklyProgress(progressRes.data);
+  const upcoming = (upcomingRes.data ?? []) as UpcomingSchedule[];
+  const summary = parseLastWeekSummary(summaryRes.data);
   const activity = ((activityRes.data ?? []) as FollowingActivityRow[]).map((a) => ({ ...a, avatar: parseAvatar(a.avatar) }));
 
   const publicRooms = (publicRes.data ?? []) as RoomCardData[];
@@ -44,6 +55,10 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           ＋ 部屋をつくる
         </ButtonLink>
       </div>
+
+      {!filtering && progress && <WeeklyGoalBar progress={progress} isMe />}
+      {!filtering && summary && <LastWeekCard summary={summary} />}
+      {!filtering && upcoming.length > 0 && <UpcomingSchedules items={upcoming} now={now.getTime()} />}
 
       <form role="search" className="flex flex-col gap-3">
         <div className="flex gap-2">

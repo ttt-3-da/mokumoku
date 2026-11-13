@@ -31,7 +31,7 @@ test("部屋を作って入室 → 退室 → 記録画面まで進める", asyn
   // 記録は自分だけのもの。1分未満なのでまだ何もない
   await page.getByRole("link", { name: "記録" }).click();
   await expect(page.getByRole("heading", { name: "記録" })).toBeVisible();
-  await expect(page.getByText("まだ記録がありません")).toBeVisible();
+  await expect(page.getByText("まだ記録がありません。自習室で")).toBeVisible();
 
   // ロビーの「公開中の部屋」に出ている
   await page.goto("/lobby");

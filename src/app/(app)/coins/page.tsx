@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ButtonLink, Card } from "@/components/ui";
 import { parseShopItem } from "@/lib/avatar";
+import { BADGES, isBadgeId } from "@/lib/badges";
 import { createClient, getWallet } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "コイン" };
@@ -23,6 +24,12 @@ function describe(r: Row): string {
     case "purchase": {
       const name = parseShopItem(r.detail ?? "")?.label ?? (r.detail ?? "");
       return `「${name}」を買った`;
+    }
+    case "goal":
+      return "週の目標を達成";
+    case "badge": {
+      const id = r.detail?.split(":")[1];
+      return isBadgeId(id) ? `バッジ「${BADGES[id].name}」` : "バッジ";
     }
     default:
       return r.reason;
@@ -50,6 +57,8 @@ export default async function CoinsPage() {
           <li>📚 勉強10分ごとに 🪙1（退室したときにまとめてもらえます）</li>
           <li>🍅 ポモドーロ1回完了で 🪙2</li>
           <li>🔥 連続3日で 🪙10、7日で 🪙30、30日で 🪙100</li>
+          <li>🏁 週の目標を達成すると 🪙20（週に1回・目標は設定から）</li>
+          <li>🏅 実績バッジを取ると 🪙5〜30</li>
         </ul>
         <p className="mt-2 text-xs text-ink-soft">部屋のテーマは、コインではなく部屋にたまる🍅（みんなの勉強時間25分で1個）で買います。</p>
       </Card>

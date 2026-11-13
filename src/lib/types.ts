@@ -13,6 +13,8 @@ export type Profile = {
   is_public: boolean;
   /** false なら学習の統計を本人以外に見せない */
   stats_public: boolean;
+  /** 週の目標（分）。決めていなければ null */
+  weekly_goal_minutes: number | null;
 };
 
 export type Visibility = "public" | "unlisted" | "approval";
@@ -38,6 +40,9 @@ export type Room = {
   created_at: string;
   closed_at: string | null;
   deleted_at: string | null;
+  /** 定例の曜日（1=月〜7=日）と開始時刻（日本時間 "HH:MM:SS"） */
+  schedule_days?: number[];
+  schedule_time?: string | null;
 };
 
 /** ロビーのカード表示用（在室人数付き） */

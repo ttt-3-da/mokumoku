@@ -45,7 +45,7 @@ export const requireProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, display_name, created_at, bio, is_public, stats_public")
+    .select("id, username, display_name, created_at, bio, is_public, stats_public, weekly_goal_minutes")
     .eq("id", userId)
     .single();
 
@@ -58,7 +58,7 @@ export const getAvatar = cache(async (userId: string): Promise<Avatar> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("avatars")
-    .select("color, eyes, mouth, cheeks, head, desk, hachimaki")
+    .select("color, eyes, mouth, cheeks, head, neck, desk, hachimaki")
     .eq("user_id", userId)
     .maybeSingle();
   return parseAvatar(data);

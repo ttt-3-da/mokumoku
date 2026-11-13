@@ -3,7 +3,7 @@ import { formatMinutes } from "@/lib/pomodoro";
 import { grassLevel, grassWeeks, shortDate, WEEKDAY_LABELS, type ProfileStats } from "@/lib/stats";
 
 /** 草カレンダーの濃さ（1色の明→暗。0 は学習なし） */
-const GRASS = ["#ece4d8", "#d3e8c9", "#a8d197", "#73ad62", "#437a37"] as const;
+const GRASS = ["var(--line)", "#d3e8c9", "#a8d197", "#73ad62", "#437a37"] as const;
 
 /**
  * プロフィールの統計：今週の合計・連続日数・累計、週グラフ、草カレンダー、タグ別の割合。

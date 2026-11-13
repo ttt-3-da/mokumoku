@@ -11,6 +11,29 @@
   --kinako: #e6c88f;
   --accent: #e98aa1;
   --accent-strong: #d76c86;
+  color-scheme: light;
+}
+
+/* ダークモード。data-theme は src/app/layout.tsx の先読みスクリプトが付ける（自動のときは端末の設定から決める）
+   もちの体の色と部屋のテーマの絵はそのまま */
+:root[data-theme="dark"] {
+  --cream: #1f1c1a;
+  --paper: #2b2725;
+  --ink: #ede6de;
+  --ink-soft: #b2a89f;
+  --line: #413a35;
+  --accent: #d9748e;
+  --accent-strong: #ec8fa6;
+  --color-red-50: #3b2224;
+  --color-red-200: #6b3a3d;
+  --color-red-600: #f39a9a;
+  --color-red-700: #f6abab;
+  --color-green-700: #9fd49a;
+  --color-green-800: #b4e0ae;
+  color-scheme: dark;
+}
+:root[data-theme="dark"] .mochi-shadow {
+  opacity: 0.35;
 }
 
 @theme inline {
@@ -377,4 +400,9 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* まだ取っていないバッジのシルエット。ダークモードでは黒だと見えないので白っぽくする */
+:root[data-theme="dark"] .dark-silhouette {
+  filter: grayscale(1) brightness(0) invert(1);
 }

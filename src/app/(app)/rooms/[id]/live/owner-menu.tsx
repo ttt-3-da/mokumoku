@@ -39,11 +39,77 @@ export function OwnerMenu({
       <InviteLink code={room.invite_code} />
       {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
       {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
+      <ScheduleEditor room={room} />
       <ThemePicker roomId={room.id} theme={theme} onChange={onChangeTheme} />
       <Bans roomId={room.id} />
       <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
       <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
     </div>
+  );
+}
+
+const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"] as const;
+
+/** 定例の部屋：曜日と開始時刻。ポモドーロの部屋なら開始時刻にタイマーが自動で始まる */
+function ScheduleEditor({ room }: { room: Room }) {
+  const [days, setDays] = useState<number[]>(room.schedule_days ?? []);
+  const [time, setTime] = useState(room.schedule_time?.slice(0, 5) ?? "07:00");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  function toggle(d: number) {
+    setDays((cur) => (cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort()));
+    setMessage(null);
+  }
+
+  async function save() {
+    setSaving(true);
+    setMessage(null);
+    const { error } = await createClient().rpc("set_room_schedule", { p_room_id: room.id, p_days: days, p_time: days.length ? time : null });
+    setSaving(false);
+    setMessage(error ? { ok: false, text: rpcErrorMessage(error) } : { ok: true, text: days.length ? "定例を保存しました" : "定例をやめました" });
+  }
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="font-bold">定例（日本時間）</legend>
+      <div className="flex flex-wrap items-center gap-1">
+        {DAY_LABELS.map((label, i) => (
+          <button
+            key={label}
+            type="button"
+            aria-pressed={days.includes(i + 1)}
+            onClick={() => toggle(i + 1)}
+            className={`h-8 w-8 rounded-full text-xs ${days.includes(i + 1) ? "bg-ink font-bold text-paper" : "bg-paper hover:bg-sakura/20"}`}
+          >
+            {label}
+          </button>
+        ))}
+        <input
+          type="time"
+          value={time}
+          onChange={(e) => {
+            setTime(e.target.value);
+            setMessage(null);
+          }}
+          aria-label="開始時刻"
+          className="ml-1 rounded-xl border border-line bg-paper px-2 py-1 text-xs"
+        />
+        <Button variant="secondary" onClick={save} disabled={saving || (days.length > 0 && !time)} className="ml-auto !px-3 !py-1">
+          {saving ? "保存中…" : "保存"}
+        </Button>
+      </div>
+      <p className="text-xs text-ink-soft">
+        参加したことのある人とオーナーをフォローしている人のロビーに30分前から出ます。参加したことのある人には 📬 でもお知らせします。
+        {room.timer_mode === "pomodoro" && "開始時刻にポモドーロが自動で始まります。"}
+        曜日を全部外して保存すると、定例をやめます。
+      </p>
+      {message && (
+        <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-green-700" : "text-red-600"}`}>
+          {message.text}
+        </p>
+      )}
+    </fieldset>
   );
 }
 

@@ -4,6 +4,11 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(24);
 
+-- バッジのコインとお知らせは 010 で確かめる。ここでは数がずれないよう止めておく
+update public.badge_defs set coins = 0;
+alter table public.follows disable trigger follows_badge;
+alter table public.rooms disable trigger rooms_badge;
+
 create or replace function pg_temp.login(p_id uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),
          set_config('request.jwt.claims', json_build_object('sub', p_id, 'role', 'authenticated')::text, true);

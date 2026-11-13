@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { DEFAULT_AVATAR, UNLOCK_ITEM_LABEL, UNLOCKABLE_ITEMS, type Avatar, type UnlockItemId } from "@/lib/avatar";
 import { ButtonLink, Card } from "@/components/ui";
+import { BADGES, isBadgeId } from "@/lib/badges";
 import { formatMinutes } from "@/lib/pomodoro";
 import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
 import type { StudySession } from "@/lib/types";
@@ -34,12 +35,14 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
   const session = data as StudySession;
   if (!session.ended_at) redirect(`/rooms/${session.room_id}/live`);
 
-  const [{ data: room }, avatar, { data: unlockRows }, { data: coinRows }] = await Promise.all([
+  const [{ data: room }, avatar, { data: unlockRows }, { data: coinRows }, { data: badgeRows }] = await Promise.all([
     supabase.from("rooms").select("name, icon, timer_mode").eq("id", session.room_id).maybeSingle(),
     getAvatar(me.id),
     supabase.from("unlocks").select("item_id").eq("user_id", me.id).eq("session_id", session.id),
     supabase.from("coin_transactions").select("amount, reason, detail").eq("session_id", session.id),
+    supabase.from("user_badges").select("badge_id").eq("user_id", me.id).eq("session_id", session.id),
   ]);
+  const newBadges = (badgeRows ?? []).map((r) => r.badge_id as string).filter(isBadgeId);
   const coins = (coinRows ?? []) as { amount: number; reason: string; detail: string | null }[];
   const coinTotal = coins.reduce((s, c) => s + c.amount, 0);
   const unlocked = (unlockRows ?? []).map((r) => r.item_id as string).filter((x): x is UnlockItemId => x in UNLOCK_ITEM_LABEL);
@@ -58,6 +61,26 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
         <p role="status" className="w-full rounded-2xl bg-kinako/30 px-4 py-2 text-center text-sm">
           {REMOVED_MESSAGE[removed]}
         </p>
+      )}
+
+      {newBadges.length > 0 && (
+        <Card className="w-full border-2 border-accent">
+          <h2 className="mb-3 text-center font-bold">🏅 実績バッジを手に入れた！</h2>
+          <ul className="flex flex-wrap justify-center gap-4">
+            {newBadges.map((id) => (
+              <li key={id} className="animate-mochi-drop flex w-28 flex-col items-center gap-1 text-center text-sm">
+                <span className="text-4xl" aria-hidden>
+                  {BADGES[id].icon}
+                </span>
+                <b>{BADGES[id].name}</b>
+                <span className="text-[11px] text-ink-soft">{BADGES[id].desc}</span>
+              </li>
+            ))}
+          </ul>
+          <ButtonLink href={`/u/${me.username}`} variant="ghost" className="mt-3 w-full">
+            バッジを見る
+          </ButtonLink>
+        </Card>
       )}
 
       {unlocked.length > 0 && (
@@ -108,7 +131,7 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
           <ul className="mt-1 flex flex-wrap justify-center gap-x-3 text-xs text-ink-soft">
             {coins.map((c, i) => (
               <li key={i}>
-                {c.reason === "study" ? "勉強" : c.reason === "pomodoro" ? "ポモドーロ" : `連続${c.detail?.split(":")[1] ?? ""}日ボーナス`} +{c.amount}
+                {coinLabel(c.reason, c.detail)} +{c.amount}
               </li>
             ))}
           </ul>
@@ -132,6 +155,24 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
         </Card>
       )}    </div>
   );
+}
+
+function coinLabel(reason: string, detail: string | null): string {
+  const value = detail?.split(":")[1] ?? "";
+  switch (reason) {
+    case "study":
+      return "勉強";
+    case "pomodoro":
+      return "ポモドーロ";
+    case "streak":
+      return `連続${value}日ボーナス`;
+    case "goal":
+      return "🏁 週の目標を達成";
+    case "badge":
+      return isBadgeId(value) ? `🏅${BADGES[value].name}` : "バッジ";
+    default:
+      return "ボーナス";
+  }
 }
 
 function UnlockPreview({ item, base, seed }: { item: UnlockItemId; base: Avatar; seed: string }) {

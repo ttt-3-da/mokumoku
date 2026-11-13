@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Card } from "@/components/ui";
 import { requireProfile } from "@/lib/supabase/server";
-import { DeleteAccountForm, PasswordForm, ProfileForm, VisibilityForm } from "./forms";
+import { ColorSchemeForm, DeleteAccountForm, GoalForm, PasswordForm, ProfileForm, VisibilityForm } from "./forms";
 
 export const metadata: Metadata = { title: "設定" };
 
@@ -25,6 +25,18 @@ export default async function SettingsPage() {
       <Card>
         <h2 className="mb-3 font-bold">プロフィール</h2>
         <ProfileForm displayName={me.display_name} bio={me.bio} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-bold">週の目標</h2>
+        <p className="mb-3 text-xs text-ink-soft">ロビーとプロフィールに今週の進み具合が出ます（プロフィールでは統計を見せる設定のときだけ）。</p>
+        <GoalForm goalMinutes={me.weekly_goal_minutes} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-bold">見た目のモード</h2>
+        <p className="mb-3 text-xs text-ink-soft">このブラウザに保存されます。</p>
+        <ColorSchemeForm />
       </Card>
 
       <Card>

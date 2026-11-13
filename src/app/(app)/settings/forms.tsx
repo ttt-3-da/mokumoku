@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Button, Field, inputClass } from "@/components/ui";
+import { COLOR_SCHEME_KEY, COLOR_SCHEME_LABEL, parseColorScheme, type ColorSchemePref } from "@/lib/color-scheme";
+import { GOAL_HOURS_MAX, GOAL_HOURS_MIN } from "@/lib/goals";
 import { BIO_MAX, charLength } from "@/lib/validation";
-import { changePassword, deleteAccount, updateProfile, updateVisibility, type FormState } from "./actions";
+import { changePassword, deleteAccount, updateGoal, updateProfile, updateVisibility, type FormState } from "./actions";
 
 function Message({ state, okText }: { state: FormState; okText: string }) {
   if (state.error) {
@@ -72,6 +74,81 @@ export function VisibilityForm({ isPublic, statsPublic }: { isPublic: boolean; s
         label="学習の統計を見せる"
         hint="今週の合計・連続日数・草カレンダー・タグ別の割合を、プロフィールに表示します（プロフィールが公開のときだけ）。"
       />
+      <Message state={state} okText="保存しました" />
+      <Button type="submit" disabled={pending} className="self-end">
+        {pending ? "保存中…" : "保存する"}
+      </Button>
+    </form>
+  );
+}
+
+/** 見た目のモード。このブラウザだけに保存する */
+export function ColorSchemeForm() {
+  const [pref, setPref] = useState<ColorSchemePref>("auto");
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      try {
+        setPref(parseColorScheme(localStorage.getItem(COLOR_SCHEME_KEY)));
+      } catch {
+        // 読めなければ自動のまま
+      }
+    }, 0);
+    return () => clearTimeout(id);
+  }, []);
+
+  function change(v: ColorSchemePref) {
+    setPref(v);
+    try {
+      if (v === "auto") localStorage.removeItem(COLOR_SCHEME_KEY);
+      else localStorage.setItem(COLOR_SCHEME_KEY, v);
+    } catch {
+      // 保存できなくても、この画面の間は切り替える
+    }
+    const apply = (window as { __applyColorScheme?: () => void }).__applyColorScheme;
+    if (apply) apply();
+    else document.documentElement.setAttribute("data-theme", v === "dark" ? "dark" : "light");
+  }
+
+  return (
+    <fieldset className="flex flex-wrap gap-2">
+      <legend className="sr-only">見た目のモード</legend>
+      {(Object.keys(COLOR_SCHEME_LABEL) as ColorSchemePref[]).map((v) => (
+        <label
+          key={v}
+          className={`cursor-pointer rounded-full border px-4 py-1.5 text-sm ${pref === v ? "border-accent bg-sakura/20 font-bold" : "border-line bg-paper hover:bg-cream"}`}
+        >
+          <input type="radio" name="color_scheme" value={v} checked={pref === v} onChange={() => change(v)} className="sr-only" />
+          {COLOR_SCHEME_LABEL[v]}
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** 週の目標（時間） */
+export function GoalForm({ goalMinutes }: { goalMinutes: number | null }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(updateGoal, {});
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <Field label="1週間の勉強時間" htmlFor="weekly_goal" hint={`${GOAL_HOURS_MIN}〜${GOAL_HOURS_MAX}時間。空にすると目標なし。達成すると 🪙20（週に1回）`}>
+        <div className="flex items-center gap-2">
+          <input
+            id="weekly_goal"
+            name="weekly_goal"
+            type="number"
+            inputMode="decimal"
+            min={GOAL_HOURS_MIN}
+            max={GOAL_HOURS_MAX}
+            step={0.5}
+            defaultValue={goalMinutes === null ? "" : goalMinutes / 60}
+            placeholder="例：10"
+            className={`${inputClass} max-w-32`}
+          />
+          <span className="text-sm">時間 / 週</span>
+        </div>
+      </Field>
       <Message state={state} okText="保存しました" />
       <Button type="submit" disabled={pending} className="self-end">
         {pending ? "保存中…" : "保存する"}

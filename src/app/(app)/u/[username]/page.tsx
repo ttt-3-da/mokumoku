@@ -1,16 +1,22 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DeskItem, Mochi } from "@/components/mochi";
+import { BadgeGrid } from "@/components/badge-grid";
 import { FollowButton } from "@/components/follow-button";
 import { ReportButton } from "@/components/report-button";
 import { ButtonLink, Card } from "@/components/ui";
+import { WeeklyGoalBar } from "@/components/weekly-goal";
 import { UNLOCK_ITEM_LABEL, UNLOCKABLE_ITEMS } from "@/lib/avatar";
+import { BADGE_IDS, isBadgeId, type BadgeId } from "@/lib/badges";
 import type { FollowInfo } from "@/lib/follow";
+import { parseWeeklyProgress } from "@/lib/goals";
 import { plantLevel } from "@/lib/room-theme";
 import type { ProfileStats } from "@/lib/stats";
 import { createClient, getAvatar, getUnlocks, requireProfile } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
 import { ProfileStatsView } from "./profile-stats";
+
+const BADGE_COUNT = BADGE_IDS.length;
 
 export async function generateMetadata({ params }: PageProps<"/u/[username]">): Promise<Metadata> {
   const { username } = await params;
@@ -31,12 +37,19 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   if (!data) return <NotAvailable />;
   const profile = data as Profile;
   const isMe = profile.id === me.id;
-  const [avatar, unlocks, { data: statsData }, { data: followData }] = await Promise.all([
+  const [avatar, unlocks, { data: statsData }, { data: followData }, { data: progressData }, { data: badgeData }] = await Promise.all([
     getAvatar(profile.id),
     getUnlocks(profile.id),
     supabase.rpc("get_profile_stats", { p_username: profile.username }),
     supabase.rpc("get_follow_info", { p_username: profile.username }),
+    supabase.rpc("get_weekly_progress", { p_username: profile.username }),
+    supabase.rpc("list_user_badges", { p_username: profile.username }),
   ]);
+  const progress = parseWeeklyProgress(progressData);
+  const badges = new Map<BadgeId, string>();
+  for (const b of (badgeData ?? []) as { badge_id: string; earned_at: string }[]) {
+    if (isBadgeId(b.badge_id)) badges.set(b.badge_id, b.earned_at);
+  }
   const follow = followData as FollowInfo | null;
   const stats = statsData as ProfileStats | null;
 
@@ -102,11 +115,23 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
         )}
       </Card>
 
+      {progress && <WeeklyGoalBar progress={progress} isMe={isMe} />}
+
       {stats ? (
         <ProfileStatsView stats={stats} />
       ) : (
         <Card className="text-center text-sm text-ink-soft">学習の統計は非公開です。</Card>
       )}
+
+      <Card>
+        <h2 className="mb-3 font-bold">
+          実績バッジ
+          <span className="ml-2 text-sm font-normal text-ink-soft tabular-nums">
+            {badges.size} / {BADGE_COUNT}
+          </span>
+        </h2>
+        <BadgeGrid earned={badges} />
+      </Card>
 
       <Card>
         <h2 className="mb-3 font-bold">集めたアイテム</h2>
