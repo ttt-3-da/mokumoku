@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DeskItem, Mochi } from "@/components/mochi";
+import { FollowButton } from "@/components/follow-button";
 import { ReportButton } from "@/components/report-button";
 import { ButtonLink, Card } from "@/components/ui";
 import { UNLOCK_ITEM_LABEL, UNLOCKABLE_ITEMS } from "@/lib/avatar";
+import type { FollowInfo } from "@/lib/follow";
 import { plantLevel } from "@/lib/room-theme";
 import type { ProfileStats } from "@/lib/stats";
 import { createClient, getAvatar, getUnlocks, requireProfile } from "@/lib/supabase/server";
@@ -29,11 +31,13 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   if (!data) return <NotAvailable />;
   const profile = data as Profile;
   const isMe = profile.id === me.id;
-  const [avatar, unlocks, { data: statsData }] = await Promise.all([
+  const [avatar, unlocks, { data: statsData }, { data: followData }] = await Promise.all([
     getAvatar(profile.id),
     getUnlocks(profile.id),
     supabase.rpc("get_profile_stats", { p_username: profile.username }),
+    supabase.rpc("get_follow_info", { p_username: profile.username }),
   ]);
+  const follow = followData as FollowInfo | null;
   const stats = statsData as ProfileStats | null;
 
   const joined = new Date(profile.created_at).toLocaleDateString("ja-JP", {
@@ -58,7 +62,23 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             {isMe && !profile.is_public && (
               <p className="mt-1 inline-block rounded-full bg-cream px-2 py-0.5 text-xs">🔒 非公開中（ほかの人には見えません）</p>
             )}
-            {!isMe && <ReportButton targetType="user" targetId={profile.id} className="mt-2" />}
+            {follow && (
+              <p className="mt-2 flex gap-3 text-sm">
+                <Link href={`/u/${profile.username}/following`} className="hover:underline">
+                  <b className="tabular-nums">{follow.following}</b> <span className="text-ink-soft">フォロー中</span>
+                </Link>
+                <Link href={`/u/${profile.username}/followers`} className="hover:underline">
+                  <b className="tabular-nums">{follow.followers}</b> <span className="text-ink-soft">フォロワー</span>
+                </Link>
+                {!isMe && follow.follows_me && <span className="rounded-full bg-cream px-2 text-xs leading-5">フォローされています</span>}
+              </p>
+            )}
+            {!isMe && (
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                {follow && <FollowButton username={profile.username} initialFollowing={follow.is_following} followsMe={follow.follows_me} />}
+                <ReportButton targetType="user" targetId={profile.id} />
+              </div>
+            )}
             {isMe && (
               <div className="mt-3 flex flex-wrap gap-2">
                 <ButtonLink href="/avatar" variant="secondary">

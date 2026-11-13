@@ -17,6 +17,8 @@ const MESSAGES: Record<string, string> = {
   invalid_note: "メモは280文字以内にしてください",
   ng_word_profile: "表示名か自己紹介に使えない言葉が含まれています",
   confirm_mismatch: "確認のユーザーIDが違います",
+  user_not_found: "ユーザーが見つからないか、プロフィールが非公開です",
+  cannot_follow_self: "自分はフォローできません",
   item_locked: "まだ解放されていないアイテムです",
   invalid_avatar: "選べないパーツが含まれています",
   forbidden: "この操作はオーナー・モデレーターだけができます",

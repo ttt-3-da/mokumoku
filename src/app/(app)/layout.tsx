@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { requireProfile } from "@/lib/supabase/server";
+import { createClient, requireProfile } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { NavLinks } from "./nav-links";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireProfile();
+  const { data: unread } = await (await createClient()).rpc("count_unread_notifications");
+  const unreadCount = typeof unread === "number" ? unread : 0;
 
   return (
     <>
@@ -14,7 +16,19 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             Mokumoku
           </Link>
           <NavLinks username={profile.username} />
-          <form action={signOut} className="ml-auto">
+          <Link
+            href="/notifications"
+            className="relative ml-auto shrink-0 rounded-full px-2.5 py-1.5 text-sm text-ink-soft hover:bg-paper hover:text-ink"
+            aria-label={unreadCount > 0 ? `お知らせ（未読${unreadCount}件）` : "お知らせ"}
+          >
+            📬
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 min-w-4 rounded-full bg-accent-strong px-1 text-center text-[10px] font-bold leading-4 text-white">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </Link>
+          <form action={signOut} className="shrink-0">
             <button type="submit" className="text-sm text-ink-soft hover:text-ink">
               ログアウト
             </button>

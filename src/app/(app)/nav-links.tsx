@@ -8,6 +8,7 @@ export function NavLinks({ username }: { username: string }) {
   const links = [
     { href: "/lobby", label: "ロビー" },
     { href: "/timeline", label: "記録" },
+    { href: "/follows", label: "フォロー" },
     { href: "/users", label: "さがす" },
     { href: `/u/${username}`, label: "プロフィール" },
     { href: "/settings", label: "設定" },

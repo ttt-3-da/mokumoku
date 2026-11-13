@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FollowingActivity } from "@/components/following-activity";
 import { RoomCard } from "@/components/room-card";
+import { parseAvatar } from "@/lib/avatar";
+import type { FollowingActivity as FollowingActivityRow } from "@/lib/follow";
 import { ButtonLink, inputClass } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import type { RoomCard as RoomCardData } from "@/lib/types";
@@ -17,10 +20,12 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const tag = param(sp.tag).slice(0, 15);
 
   const supabase = await createClient();
-  const [publicRes, mineRes] = await Promise.all([
+  const [publicRes, mineRes, activityRes] = await Promise.all([
     supabase.rpc("list_public_rooms", { p_query: q || null, p_tag: tag || null }),
     supabase.rpc("list_my_rooms"),
+    supabase.rpc("list_following_activity"),
   ]);
+  const activity = ((activityRes.data ?? []) as FollowingActivityRow[]).map((a) => ({ ...a, avatar: parseAvatar(a.avatar) }));
 
   const publicRooms = (publicRes.data ?? []) as RoomCardData[];
   const myRooms = (mineRes.data ?? []) as RoomCardData[];
@@ -72,6 +77,18 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           </div>
         )}
       </form>
+
+      {!filtering && activity.length > 0 && (
+        <section aria-labelledby="following-now">
+          <h2 id="following-now" className="mb-3 font-bold">
+            いま勉強中のフォロー中の人
+            <Link href="/follows" className="ml-2 text-sm font-normal text-ink-soft hover:underline">
+              くらべる →
+            </Link>
+          </h2>
+          <FollowingActivity items={activity} />
+        </section>
+      )}
 
       {!filtering && myRooms.length > 0 && (
         <section aria-labelledby="my-rooms">
