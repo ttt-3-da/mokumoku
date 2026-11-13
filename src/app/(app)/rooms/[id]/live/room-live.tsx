@@ -150,8 +150,8 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
     const box = seatsRef.current;
     const from = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.from}"]`);
     const to = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.to}"]`);
-    // 自分あてのスタンプは、届く瞬間に音を鳴らす
-    if (ev.to === me.id && ev.from !== me.id && !muted) playSound("stamp", FLIGHT_MS / 1000);
+    // 自分あて・自分が送ったスタンプは、相手に届く瞬間に音を鳴らす
+    if ((ev.to === me.id || ev.from === me.id) && !muted) playSound("stamp", FLIGHT_MS / 1000);
     if (!box || !to) return;
     const b = box.getBoundingClientRect();
     const t = to.getBoundingClientRect();
@@ -184,7 +184,8 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
   const lastEmoteRef = useRef<number | null>(null);
 
   function playEmote(ev: EmoteEvent) {
-    if (ev.from !== me.id && !muted) playSound("emote");
+    // 自分のエモートも、ほかの人のエモートも鳴らす
+    if (!muted) playSound("emote");
     setEmotes((m) => ({ ...m, [ev.from]: { emote: ev.emote, key: ev.id } }));
     setTimeout(
       () =>

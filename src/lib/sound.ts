@@ -22,12 +22,15 @@ export const SOUNDS = {
     { freq: 1046.5, at: 0.16, dur: 0.35 },
     { freq: 1318.5, at: 0.32, dur: 0.6 },
   ],
-  // だれかがエモートをした：小さく「ぽん」
-  emote: [{ freq: 660, at: 0, dur: 0.16, type: "sine", gain: 0.12 }],
-  // 自分あてにスタンプが届いた：キラッ
+  // エモート：「ぽこっ」
+  emote: [
+    { freq: 587.33, at: 0, dur: 0.18, type: "triangle", gain: 0.32 },
+    { freq: 880, at: 0.09, dur: 0.28, type: "triangle", gain: 0.28 },
+  ],
+  // スタンプが届いた：キラッ
   stamp: [
-    { freq: 1567.98, at: 0, dur: 0.12, type: "triangle", gain: 0.12 },
-    { freq: 2093, at: 0.08, dur: 0.22, type: "triangle", gain: 0.1 },
+    { freq: 1567.98, at: 0, dur: 0.14, type: "triangle", gain: 0.26 },
+    { freq: 2093, at: 0.08, dur: 0.26, type: "triangle", gain: 0.22 },
   ],
 } satisfies Record<string, Note[]>;
 
@@ -75,11 +78,27 @@ export function unlockAudio(onReady: () => void): () => void {
 
 /**
  * 音を鳴らす。delaySec 秒後に予約もできる（音声の時計で予約するので、見ていないタブでも時間どおりに鳴る）。
+ * まだ音の準備ができていない（ページで最初のクリックの直後など）ときは、準備ができるのを待ってから鳴らす。
  * 戻り値で、まだ鳴っていない予約を取り消せる。
  */
 export function playSound(name: SoundName, delaySec = 0): () => void {
   const c = getContext();
-  if (!c || c.state !== "running") return () => {};
+  if (!c) return () => {};
+  let cancelled = false;
+  let cancelScheduled: (() => void) | null = null;
+  const run = () => {
+    if (cancelled || c.state !== "running") return;
+    cancelScheduled = schedule(c, name, delaySec);
+  };
+  if (c.state === "running") run();
+  else void c.resume().then(run, () => {});
+  return () => {
+    cancelled = true;
+    cancelScheduled?.();
+  };
+}
+
+function schedule(c: AudioContext, name: SoundName, delaySec: number): () => void {
   const start = c.currentTime + Math.max(0, delaySec);
   const master = c.createGain();
   master.gain.value = 0.9;
@@ -115,7 +134,6 @@ export function playSound(name: SoundName, delaySec = 0): () => void {
     master.disconnect();
   };
 }
-
 // ---------------------------------------------------------------- ミュート設定（このブラウザに保存）
 
 const MUTE_KEY = "mokumoku:muted";
