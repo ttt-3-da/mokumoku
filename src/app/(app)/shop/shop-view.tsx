@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Mochi } from "@/components/mochi";
+import { DeskItem, Mochi } from "@/components/mochi";
 import { Button, Card } from "@/components/ui";
 import { parseShopItem, type Avatar, type ShopPart } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
@@ -12,13 +12,15 @@ import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, Wallet } from "@/lib/supabase/server";
 import { saveAvatar } from "../avatar/actions";
 
-/** 種類のタブ。アクセサリーは3回目に追加する */
-const CATEGORIES: { kind: ShopPart | "accessory"; label: string; free: string; ready: boolean }[] = [
+/** 種類のタブ */
+const CATEGORIES: { kind: ShopPart; label: string; free: string; ready: boolean }[] = [
   { kind: "color", label: "体の色", free: "白もち・さくら・よもぎ", ready: true },
   { kind: "eyes", label: "目", free: "点・にっこり・キラキラ・ねむそう・メガネ付き", ready: true },
   { kind: "mouth", label: "口", free: "ω・小さな丸・にっこり・への字", ready: true },
   { kind: "cheeks", label: "ほっぺ", free: "なし・ピンク・オレンジ", ready: true },
-  { kind: "accessory", label: "アクセサリー", free: "", ready: false },
+  { kind: "head", label: "頭の小物", free: "なし・リボン", ready: true },
+  { kind: "neck", label: "首の小物", free: "なし", ready: true },
+  { kind: "desk", label: "机の小物", free: "なし", ready: true },
 ];
 
 const SORT_KEY = "mokumoku:shop-sort";
@@ -134,7 +136,10 @@ export function ShopView({
       <div className="grid gap-5 md:grid-cols-[260px_1fr] md:items-start">
         {/* 試着 */}
         <Card className="flex flex-col items-center gap-3 md:sticky md:top-20">
-          <Mochi avatar={preview} size={140} seed={seed} label="試着中のもち" />
+          <div className="flex items-end">
+            <Mochi avatar={preview} size={140} seed={seed} label="試着中のもち" />
+            <DeskItem kind={preview.desk} size={44} level={3} />
+          </div>
           {selectedItem && selectedPart ? (
             <>
               <p className="text-center font-bold">{selectedPart.label}</p>
@@ -178,7 +183,7 @@ export function ShopView({
                   aria-selected={c.kind === kind}
                   disabled={!c.ready}
                   title={c.ready ? undefined : "近日追加"}
-                  onClick={() => c.ready && c.kind !== "accessory" && changeKind(c.kind)}
+                  onClick={() => c.ready && changeKind(c.kind)}
                   className={`rounded-full px-3 py-1 text-sm ${
                     c.kind === kind ? "bg-ink font-bold text-paper" : "bg-paper hover:bg-sakura/20 disabled:opacity-50 disabled:hover:bg-paper"
                   }`}
@@ -222,8 +227,12 @@ export function ShopView({
                       isSelected ? "border-accent bg-sakura/10" : "border-transparent bg-paper shadow-sm hover:border-line"
                     }`}
                   >
-                    <span className="anim-paused">
-                      <Mochi avatar={withPart(wearing, part.part, part.value)} size={kind === "color" ? 52 : 60} seed={`shop-${item.item_id}`} />
+                    <span className="anim-paused flex h-[60px] items-center">
+                      {part.part === "desk" ? (
+                        <DeskItem kind={part.value as Avatar["desk"]} size={52} level={3} />
+                      ) : (
+                        <Mochi avatar={withPart(wearing, part.part, part.value)} size={kind === "color" ? 52 : 60} seed={`shop-${item.item_id}`} />
+                      )}
                     </span>
                     <span className="font-bold leading-tight">{part.label}</span>
                     {has ? (

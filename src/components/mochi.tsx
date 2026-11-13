@@ -1,6 +1,7 @@
 import { useId, type CSSProperties } from "react";
 import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type ColorDef } from "@/lib/avatar";
 import type { EmoteId } from "@/lib/emotes";
+import { EXTRA_DESKS, EXTRA_HEADS, ExtraDesk, ExtraHead, NeckItem } from "./mochi-accessories";
 import { EXTRA_CHEEKS, EXTRA_EYES, EXTRA_MOUTHS, ExtraCheeks, ExtraEyes, ExtraMouth } from "./mochi-parts";
 
 /**
@@ -179,7 +180,12 @@ export function Mochi({
 
               <Mouth kind={avatar.mouth} ink={ink} />
 
-              <HeadItem kind={avatar.head} />
+              <NeckItem kind={avatar.neck} uid={uid} />
+              {EXTRA_HEADS.has(avatar.head) ? (
+                <ExtraHead kind={avatar.head} ink={ink} fill={color.fill} edge={color.edge} />
+              ) : (
+                <HeadItem kind={avatar.head} />
+              )}
 
               {/* 手（必要なときだけ小さな丸） */}
               {focus && !busy && (
@@ -371,6 +377,13 @@ function HeadItem({ kind }: { kind: Avatar["head"] }) {
 /** 机の小物（席の机の上に置く）。観葉植物は level で育つ（1〜3） */
 export function DeskItem({ kind, size = 28, level = 1 }: { kind: Avatar["desk"]; size?: number; level?: 1 | 2 | 3 }) {
   if (kind === "none") return null;
+  if (EXTRA_DESKS.has(kind)) {
+    return (
+      <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden className="shrink-0">
+        <ExtraDesk kind={kind} />
+      </svg>
+    );
+  }
   return (
     <svg viewBox="0 0 40 40" width={size} height={size} aria-hidden className="shrink-0">
       {kind === "mug" && (

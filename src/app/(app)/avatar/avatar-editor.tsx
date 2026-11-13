@@ -14,6 +14,7 @@ import {
   isItemAvailable,
   itemId,
   MOUTHS,
+  NECK_ITEMS,
   UNLOCKABLE_ITEMS,
   type Avatar,
 } from "@/lib/avatar";
@@ -27,6 +28,7 @@ const SECTIONS: { key: PartKey; title: string; options: Record<string, string> }
   { key: "mouth", title: "口", options: MOUTHS },
   { key: "cheeks", title: "ほっぺ", options: CHEEKS },
   { key: "head", title: "頭の小物", options: HEAD_ITEMS },
+  { key: "neck", title: "首の小物（頭の小物と一緒に付けられる）", options: NECK_ITEMS },
   { key: "desk", title: "机の小物", options: DESK_ITEMS },
   { key: "hachimaki", title: "ハチマキ（集中中）", options: HACHIMAKI },
 ];
@@ -130,7 +132,7 @@ export function AvatarEditor({
           <Card key={section.key}>
             <h2 className="mb-3 flex items-baseline text-sm font-bold">
               {section.title}
-              {(section.key === "color" || section.key === "eyes" || section.key === "mouth" || section.key === "cheeks") && (
+              {section.key !== "hachimaki" && (
                 <Link href="/shop" className="ml-auto text-xs font-normal text-ink-soft hover:underline">
                   🪙 ほかはショップで →
                 </Link>

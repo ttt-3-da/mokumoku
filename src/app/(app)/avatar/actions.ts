@@ -17,6 +17,7 @@ export async function saveAvatar(input: Avatar): Promise<{ error?: string; avata
     p_head: a.head,
     p_desk: a.desk,
     p_hachimaki: a.hachimaki,
+    p_neck: a.neck,
   });
   if (error) return { error: rpcErrorMessage(error) };
   revalidatePath(`/u/${me.username}`);

@@ -3,7 +3,7 @@ import { DEFAULT_AVATAR, heatLevel, isItemAvailable, parseAvatar, seededRandom }
 
 describe("parseAvatar", () => {
   it("正しいパーツIDはそのまま使う", () => {
-    const a = { color: "yuzu", eyes: "glasses", mouth: "frown", cheeks: "none", head: "crown", desk: "pet", hachimaki: "indigo" };
+    const a = { color: "yuzu", eyes: "glasses", mouth: "frown", cheeks: "none", head: "crown", desk: "pet", hachimaki: "indigo", neck: "muffler" };
     expect(parseAvatar(a)).toEqual(a);
   });
 

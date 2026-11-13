@@ -229,6 +229,22 @@ export const HEAD_ITEMS = {
   ribbon: "リボン",
   leaf: "葉っぱ",
   crown: "王冠",
+  // ここから有料（値段は DB の shop_items）
+  ahoge: "アホ毛",
+  odango: "おだんご",
+  bigribbon: "大きいリボン",
+  nekomimi: "ねこみみ",
+  usamimi: "うさみみ",
+  kumamimi: "くまみみ",
+  chonmage: "ちょんまげ",
+  beret: "ベレー帽",
+  knit: "ニット帽",
+  tsuno: "つの",
+  mugiwara: "麦わら帽子",
+  hanakanmuri: "花かんむり",
+  headphones: "ヘッドホン",
+  mahou: "魔法の帽子",
+  tenshi: "天使の輪",
 } as const;
 
 export const DESK_ITEMS = {
@@ -237,6 +253,27 @@ export const DESK_ITEMS = {
   lamp: "ランプ",
   plant: "観葉植物",
   pet: "ペットのミニもち",
+  // ここから有料（値段は DB の shop_items）
+  pencils: "えんぴつ立て",
+  onigiri: "おにぎり",
+  books: "本の山",
+  sunadokei: "砂時計",
+  mezamashi: "めざまし時計",
+  saboten: "サボテン",
+  cake: "ケーキ",
+  globe: "地球儀",
+  kingyo: "金魚鉢",
+  nekonui: "ねこのぬいぐるみ",
+} as const;
+
+/** 首の小物（頭の小物と同時に付けられる）。なし以外は有料 */
+export const NECK_ITEMS = {
+  none: "なし",
+  yodare: "よだれかけ",
+  choutie: "ちょうネクタイ",
+  muffler: "マフラー",
+  scarf: "スカーフ",
+  pendant: "ペンダント",
 } as const;
 
 export const HACHIMAKI = {
@@ -250,6 +287,7 @@ export type AvatarMouth = keyof typeof MOUTHS;
 export type AvatarCheeks = keyof typeof CHEEKS;
 export type AvatarHead = keyof typeof HEAD_ITEMS;
 export type AvatarDesk = keyof typeof DESK_ITEMS;
+export type AvatarNeck = keyof typeof NECK_ITEMS;
 export type AvatarHachimaki = keyof typeof HACHIMAKI;
 
 export type Avatar = {
@@ -260,6 +298,7 @@ export type Avatar = {
   head: AvatarHead;
   desk: AvatarDesk;
   hachimaki: AvatarHachimaki;
+  neck: AvatarNeck;
 };
 
 export const DEFAULT_AVATAR: Avatar = {
@@ -270,6 +309,7 @@ export const DEFAULT_AVATAR: Avatar = {
   head: "none",
   desk: "none",
   hachimaki: "red",
+  neck: "none",
 };
 
 /** 解放制のアイテム（item_id → 解放条件の説明）。解放の判定はフェーズ12で実装する */
@@ -321,6 +361,7 @@ export function parseAvatar(raw: unknown): Avatar {
     cheeks: pick(v.cheeks, CHEEKS, DEFAULT_AVATAR.cheeks),
     head: pick(v.head, HEAD_ITEMS, DEFAULT_AVATAR.head),
     desk: pick(v.desk, DESK_ITEMS, DEFAULT_AVATAR.desk),
+    neck: pick(v.neck, NECK_ITEMS, DEFAULT_AVATAR.neck),
     hachimaki: pick(v.hachimaki, HACHIMAKI, DEFAULT_AVATAR.hachimaki),
   };
 }
@@ -346,13 +387,16 @@ export function heatLevel(focusMinutes: number): 0 | 1 | 2 {
 }
 
 /** ショップで売っているもちのパーツの種類（DB の shop_items.kind） */
-export type ShopPart = "color" | "eyes" | "mouth" | "cheeks";
+export type ShopPart = "color" | "eyes" | "mouth" | "cheeks" | "head" | "neck" | "desk";
 
 const PART_LABELS: Record<ShopPart, Record<string, string>> = {
   color: Object.fromEntries(Object.entries(COLORS).map(([k, v]) => [k, v.label])),
   eyes: EYES,
   mouth: MOUTHS,
   cheeks: CHEEKS,
+  head: HEAD_ITEMS,
+  neck: NECK_ITEMS,
+  desk: DESK_ITEMS,
 };
 
 /** 'eyes:heart' → { part: 'eyes', value: 'heart', label: 'ハート' }。知らない品物は null */

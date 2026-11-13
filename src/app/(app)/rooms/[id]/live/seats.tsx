@@ -1,11 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { heatLevel, type Avatar } from "@/lib/avatar";
 import { getEmote, type EmoteId } from "@/lib/emotes";
 import { STATUS_LABEL } from "@/lib/presence";
 import { formatClock } from "@/lib/pomodoro";
 import { toRows } from "@/lib/room-logic";
+import type { DeskStyle } from "@/lib/room-theme";
 import type { PresenceStatus } from "@/lib/types";
 
 export type SeatMember = {
@@ -36,16 +38,19 @@ type Props = {
   /** userId → いま出しているエモート */
   emotes: Record<string, { emote: EmoteId; key: string }>;
   canSelect: boolean;
+  /** テーマの机の形 */
+  deskStyle?: DeskStyle;
 };
 
 /** 机が横並び。人数が増えたら2列目 */
-export function Seats({ members, meId, selectedId, onSelect, celebrate, hops, looks, emotes, canSelect }: Props) {
+export function Seats({ members, meId, selectedId, onSelect, celebrate, hops, looks, emotes, canSelect, deskStyle = "desk" }: Props) {
   return (
     <div className="flex flex-col gap-6">
       {toRows(members).map((row, i) => (
         <ul key={i} className="grid grid-cols-5 items-end gap-x-1 sm:gap-x-3">
           {row.map((m) => (
             <Seat
+              deskStyle={deskStyle}
               key={m.userId}
               member={m}
               isMe={m.userId === meId}
@@ -64,6 +69,7 @@ export function Seats({ members, meId, selectedId, onSelect, celebrate, hops, lo
 }
 
 function Seat({
+  deskStyle,
   member,
   isMe,
   selected,
@@ -73,6 +79,7 @@ function Seat({
   look,
   emote,
 }: {
+  deskStyle: DeskStyle;
   member: SeatMember;
   isMe: boolean;
   selected: boolean;
@@ -115,12 +122,12 @@ function Seat({
           emote={emote?.emote ?? null}
         />
       </div>
-      {/* 机 */}
-      <div className="relative -mt-3 h-4 w-full max-w-24 rounded-md bg-[var(--desk,#d9b98c)] shadow-[0_3px_0_var(--desk-edge,#c4a274)]" aria-hidden>
+      {/* 机（形はテーマによって変わる。机の小物はどの形でも右上に乗る） */}
+      <Desk style={deskStyle}>
         <span className="absolute -top-6 right-0">
           <DeskItem kind={member.avatar.desk} size={24} level={member.plantLevel} />
         </span>
-      </div>
+      </Desk>
       <span className="mt-1 max-w-full truncate rounded-md bg-paper/85 px-1.5 text-xs font-bold">
         {member.role === "owner" && <span aria-label="オーナー">👑</span>}
         {member.role === "moderator" && <span aria-label="モデレーター">🛡️</span>}
@@ -140,7 +147,7 @@ function Seat({
   );
 
   return (
-    <li className="flex min-w-0 flex-col items-center gap-1 text-center [content-visibility:auto]">
+    <li className="flex min-w-0 flex-col items-center gap-1 text-center [content-visibility:auto] [contain-intrinsic-size:auto_150px]">
       {onSelect ? (
         <button
           type="button"
@@ -160,4 +167,78 @@ function Seat({
       )}
     </li>
   );
+}
+
+/** テーマごとの机の形。どれも同じ幅に収め、上に机の小物が乗るようにする */
+function Desk({ style, children }: { style: DeskStyle; children: ReactNode }) {
+  const base = "relative -mt-3 w-full max-w-24";
+  switch (style) {
+    case "school":
+      return (
+        <div className={`${base} h-3.5 rounded-sm bg-[#d9b98c] shadow-[0_2px_0_#b8956a]`} aria-hidden>
+          <span className="absolute left-2 top-full h-3 w-1 bg-[#8a8f99]" />
+          <span className="absolute right-2 top-full h-3 w-1 bg-[#8a8f99]" />
+          {children}
+        </div>
+      );
+    case "kotatsu":
+      return (
+        <div className={`${base} h-3 rounded-sm bg-[var(--desk)] shadow-[0_2px_0_var(--desk-edge)]`} aria-hidden>
+          <span className="absolute -inset-x-1 top-full h-3 rounded-b-md bg-[repeating-linear-gradient(90deg,#e45b5b_0_6px,#f08a6b_6px_12px)] opacity-90" />
+          {children}
+        </div>
+      );
+    case "stump":
+      return (
+        <div className={`${base} flex h-5 justify-center`} aria-hidden>
+          <span className="h-5 w-16 rounded-[50%] border-2 border-[#8d6446] bg-[#d9a87e] shadow-[0_3px_0_#6e4e34]">
+            <span className="mx-auto mt-1 block h-2 w-8 rounded-[50%] border border-[#b08b5c]" />
+          </span>
+          {children}
+        </div>
+      );
+    case "seat":
+      return (
+        <div className={`${base} h-4 rounded-lg bg-[var(--desk)] shadow-[0_3px_0_var(--desk-edge)]`} aria-hidden>
+          <span className="absolute inset-x-1 top-1 h-0.5 rounded bg-white/30" />
+          {children}
+        </div>
+      );
+    case "cloud":
+      return (
+        <div className={`${base} flex h-5 justify-center`} aria-hidden>
+          <span className="h-5 w-20 rounded-full bg-white shadow-[0_3px_6px_rgba(120,150,190,0.35)]" />
+          <span className="absolute -top-1.5 left-1/2 h-5 w-10 -translate-x-1/2 rounded-full bg-white" />
+          {children}
+        </div>
+      );
+    case "bench":
+      return (
+        <div className={`${base} h-4 rounded-sm bg-[repeating-linear-gradient(90deg,var(--desk)_0_10px,var(--desk-edge)_10px_12px)] shadow-[0_3px_0_var(--desk-edge)]`} aria-hidden>
+          {children}
+        </div>
+      );
+    case "low":
+      return (
+        <div className={`${base} h-2.5 rounded-sm bg-[var(--desk)] shadow-[0_2px_0_var(--desk-edge)]`} aria-hidden>
+          <span className="absolute left-2 top-full h-1.5 w-1.5 bg-[var(--desk-edge)]" />
+          <span className="absolute right-2 top-full h-1.5 w-1.5 bg-[var(--desk-edge)]" />
+          {children}
+        </div>
+      );
+    case "counter":
+      return (
+        <div className={`${base} h-4 rounded-sm bg-[var(--desk)] shadow-[0_3px_0_var(--desk-edge)]`} aria-hidden>
+          <span className="absolute inset-x-0 top-full h-2 bg-[repeating-linear-gradient(90deg,#fff_0_6px,#e45b5b_6px_12px)]" />
+          {children}
+        </div>
+      );
+    case "desk":
+    default:
+      return (
+        <div className={`${base} h-4 rounded-md bg-[var(--desk,#d9b98c)] shadow-[0_3px_0_var(--desk-edge,#c4a274)]`} aria-hidden>
+          {children}
+        </div>
+      );
+  }
 }

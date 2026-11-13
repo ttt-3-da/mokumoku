@@ -27,7 +27,7 @@ import {
   STOPWATCH_ZERO,
   type Stopwatch,
 } from "@/lib/stopwatch";
-import { parseTheme, type RoomTheme } from "@/lib/room-theme";
+import { parseTheme, ROOM_THEMES, type RoomTheme } from "@/lib/room-theme";
 import { playSound, unlockAudio, useMuted } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -538,6 +538,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
           hops={hops}
           looks={looks}
           emotes={emotes}
+          deskStyle={ROOM_THEMES[theme].deskStyle}
           canSelect
         />
         {members.length === 0 && (

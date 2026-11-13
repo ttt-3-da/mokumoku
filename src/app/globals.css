@@ -251,6 +251,20 @@ body {
 .mochi-emote-drip { animation: emote-drip 1.3s ease-in 2; }
 .mochi-emote-flicker { animation: emote-icon 2.6s ease-out forwards, emote-flicker 0.3s ease-in-out infinite; }
 
+/* アクセサリーの小さな動き：天使の輪がふわふわ、金魚が泳ぐ */
+@keyframes halo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+.mochi-halo { animation: halo-float 3s ease-in-out infinite; }
+@keyframes desk-fish {
+  0%, 100% { transform: translateX(0) scaleX(1); }
+  45% { transform: translateX(-3px) scaleX(1); }
+  50% { transform: translateX(-3px) scaleX(-1); }
+  95% { transform: translateX(2px) scaleX(-1); }
+}
+.desk-fish { animation: desk-fish 6s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+
 /* 部屋全員がそろってジャンプ */
 .group-jump .mochi-jump { animation: mochi-jump 0.9s ease-in-out 2; }
 
@@ -270,6 +284,86 @@ body {
 }
 .stamp-flight-x { animation: stamp-x 0.9s linear forwards, stamp-fade 0.9s linear forwards; }
 .stamp-flight-y { animation: stamp-y 0.9s forwards; }
+
+/* ---------------------------------------------------------
+   部屋の背景の小さな動き（src/app/(app)/rooms/[id]/live/room-scene.tsx）
+   --------------------------------------------------------- */
+@keyframes scene-fall {
+  0% { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translate(24px, 420px) rotate(240deg); opacity: 0; }
+}
+.scene-fall { animation: scene-fall 9s linear infinite; }
+
+@keyframes scene-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+.scene-twinkle { animation: scene-twinkle 3s ease-in-out infinite; }
+
+@keyframes scene-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.scene-scroll { animation: scene-scroll 8s linear infinite; }
+
+@keyframes scene-flame {
+  0%, 100% { transform: scale(1, 1); opacity: 0.95; }
+  50% { transform: scale(0.9, 1.12); opacity: 0.8; }
+}
+.scene-flame { animation: scene-flame 0.9s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+
+@keyframes scene-sway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
+.scene-sway { animation: scene-sway 4s ease-in-out infinite; }
+
+@keyframes scene-wave {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-20px); }
+}
+.scene-wave { animation: scene-wave 6s ease-in-out infinite; }
+
+@keyframes scene-swim {
+  0% { transform: translateX(-40px) translateY(0); }
+  50% { transform: translateX(50vw) translateY(6px); }
+  100% { transform: translateX(110vw) translateY(0); }
+}
+@keyframes scene-swim-rev {
+  0% { transform: translateX(110vw) translateY(0) scaleX(-1); }
+  50% { transform: translateX(50vw) translateY(-6px) scaleX(-1); }
+  100% { transform: translateX(-40px) translateY(0) scaleX(-1); }
+}
+.scene-swim { left: 0; animation: scene-swim 16s linear infinite; }
+.scene-swim-rev { left: 0; animation: scene-swim-rev 18s linear infinite; }
+
+@keyframes scene-rise {
+  0% { transform: translateY(0); opacity: 0; }
+  15% { opacity: 0.9; }
+  100% { transform: translateY(-260px); opacity: 0; }
+}
+.scene-rise { animation: scene-rise 7s ease-in infinite; }
+
+@keyframes scene-drift {
+  from { transform: translateX(-80px); }
+  to { transform: translateX(110vw); }
+}
+.scene-drift { left: 0; animation: scene-drift 60s linear infinite; }
+
+@keyframes scene-flutter {
+  0%, 100% { transform: translate(0, 0) scaleX(1); }
+  25% { transform: translate(14px, -8px) scaleX(0.6); }
+  50% { transform: translate(28px, 2px) scaleX(1); }
+  75% { transform: translate(12px, 10px) scaleX(0.6); }
+}
+.scene-flutter { animation: scene-flutter 6s ease-in-out infinite; }
+
+/* 景色テーマの背景：景色の絵（高さ 9rem / 10rem）の地面のあたりで空と床を分ける */
+.scene-bg { background: linear-gradient(var(--wall) 0 7.4rem, var(--floor) 7.4rem 100%); }
+@media (min-width: 640px) {
+  .scene-bg { background: linear-gradient(var(--wall) 0 8.2rem, var(--floor) 8.2rem 100%); }
+}
 
 /* 非表示のタブや画面外ではアニメーションを止める */
 .anim-paused,
