@@ -32,4 +32,10 @@ test("エモートをすると、同じ部屋のほかの人の画面でもも�
   // 送った本人の画面でも動く。3秒以内の連打はできない
   await expect(b.locator(".mochi-emote-wave")).toHaveCount(1);
   await expect(b.getByRole("button", { name: "ありがとう" })).toBeDisabled();
+
+  // ミュートは押すと切り替わり、再読み込みしても覚えている
+  await b.getByRole("button", { name: /音あり/ }).click();
+  await expect(b.getByRole("button", { name: /ミュート中/ })).toHaveAttribute("aria-pressed", "true");
+  await b.reload();
+  await expect(b.getByRole("button", { name: /ミュート中/ })).toBeVisible({ timeout: 15_000 });
 });

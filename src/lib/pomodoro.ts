@@ -50,6 +50,21 @@ export function computeTimer(
   };
 }
 
+/**
+ * 次にフェーズが切り替わるまでの時間と、切り替わったあとのフェーズ。
+ * 集中中なら次は休憩の始まり、休憩中なら次は休憩の終わり（集中の始まり）。タイマーが動いていなければ null。
+ */
+export function nextPhaseChange(
+  startedAt: string | null,
+  focusMinutes: number,
+  breakMinutes: number,
+  nowMs: number,
+): { inMs: number; next: "focus" | "break" } | null {
+  const t = computeTimer(startedAt, focusMinutes, breakMinutes, nowMs);
+  if (t.kind === "idle") return null;
+  return { inMs: t.remainingMs, next: t.kind === "focus" ? "break" : "focus" };
+}
+
 /** 125000 → "2:05"、3725000 → "1:02:05" */
 export function formatClock(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));

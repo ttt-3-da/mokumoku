@@ -7,7 +7,7 @@ import type { Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { useDocumentHidden } from "@/lib/hooks/use-document-hidden";
 import { useNow } from "@/lib/hooks/use-now";
-import { computeTimer, formatClock, type TimerState } from "@/lib/pomodoro";
+import { computeTimer, formatClock, nextPhaseChange, type TimerState } from "@/lib/pomodoro";
 import { resolveStatus } from "@/lib/presence";
 import {
   claimStampSlot,
@@ -28,6 +28,7 @@ import {
   type Stopwatch,
 } from "@/lib/stopwatch";
 import { parseTheme, type RoomTheme } from "@/lib/room-theme";
+import { playSound, unlockAudio, useMuted } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import {
   claimEmoteSlot,
@@ -123,6 +124,20 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
       : { kind: "idle" };
   const status = resolveStatus({ timerPhase: timer.kind });
 
+  // ---------------------------------------------------------------- 効果音
+  const [muted, toggleMuted] = useMuted();
+  const [audioOn, setAudioOn] = useState(false);
+  useEffect(() => unlockAudio(() => setAudioOn(true)), []);
+
+  // 休憩の始まり・終わりの音は、次の切り替わり時刻に予約しておく（見ていないタブでも時間どおりに鳴る）
+  useEffect(() => {
+    if (muted || !audioOn || room.timer_mode !== "pomodoro") return;
+    const change = nextPhaseChange(timerStartedAt, room.focus_minutes, room.break_minutes, clockNow(offset));
+    if (!change) return;
+    return playSound(change.next === "break" ? "breakStart" : "breakEnd", change.inMs / 1000);
+    // timer.kind が変わる（＝切り替わった）たびに、次の切り替わりを予約し直す
+  }, [muted, audioOn, room.timer_mode, timerStartedAt, room.focus_minutes, room.break_minutes, offset, timer.kind]);
+
   // ---------------------------------------------------------------- スタンプ
   const seatsRef = useRef<HTMLDivElement>(null);
   const [target, setTarget] = useState<string | null>(null);
@@ -135,6 +150,8 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
     const box = seatsRef.current;
     const from = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.from}"]`);
     const to = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.to}"]`);
+    // 自分あてのスタンプは、届く瞬間に音を鳴らす
+    if (ev.to === me.id && ev.from !== me.id && !muted) playSound("stamp", FLIGHT_MS / 1000);
     if (!box || !to) return;
     const b = box.getBoundingClientRect();
     const t = to.getBoundingClientRect();
@@ -167,6 +184,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
   const lastEmoteRef = useRef<number | null>(null);
 
   function playEmote(ev: EmoteEvent) {
+    if (ev.from !== me.id && !muted) playSound("emote");
     setEmotes((m) => ({ ...m, [ev.from]: { emote: ev.emote, key: ev.id } }));
     setTimeout(
       () =>
@@ -425,6 +443,16 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
           </span>
           <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{room.name}</h1>
           <ConnectionBadge state={connection} />
+          <button
+            type="button"
+            onClick={toggleMuted}
+            aria-pressed={muted}
+            aria-label={muted ? "ミュート中（押すと音を鳴らす）" : "音あり（押すとミュート）"}
+            title={muted ? "ミュート中" : audioOn ? "音あり" : "画面をクリックすると音が鳴るようになります"}
+            className="shrink-0 rounded-full bg-cream px-2.5 py-1 text-sm transition hover:bg-sakura/20"
+          >
+            {muted ? "🔕" : "🔔"}
+          </button>
           {staffNow && (
             <Button
               variant="ghost"

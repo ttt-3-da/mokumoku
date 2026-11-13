@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeTimer, formatClock, formatMinutes } from "./pomodoro";
+import { computeTimer, formatClock, formatMinutes, nextPhaseChange } from "./pomodoro";
 
 const start = "2026-11-12T09:00:00.000Z";
 const at = (min: number, sec = 0) => Date.parse(start) + min * 60_000 + sec * 1000;
@@ -55,5 +55,17 @@ describe("format", () => {
     expect(formatMinutes(40)).toBe("40分");
     expect(formatMinutes(60)).toBe("1時間");
     expect(formatMinutes(95)).toBe("1時間35分");
+  });
+});
+
+describe("nextPhaseChange", () => {
+  it("タイマーが動いていなければ null", () => {
+    expect(nextPhaseChange(null, 25, 5, at(0))).toBeNull();
+  });
+  it("集中中は、休憩が始まるまでの時間を返す", () => {
+    expect(nextPhaseChange(start, 25, 5, at(20))).toEqual({ inMs: 5 * 60_000, next: "break" });
+  });
+  it("休憩中は、休憩が終わるまでの時間を返す", () => {
+    expect(nextPhaseChange(start, 25, 5, at(27, 30))).toEqual({ inMs: 2.5 * 60_000, next: "focus" });
   });
 });

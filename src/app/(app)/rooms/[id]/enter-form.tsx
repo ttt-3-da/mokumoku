@@ -58,7 +58,8 @@ export function EnterForm({
           {state.error}
         </p>
       )}
-      <Button type="submit" disabled={pending || task.trim() === ""}>
+      {/* 空かどうかは input の required とサーバーで確かめる（ページの準備前に入力されても押せるように） */}
+      <Button type="submit" disabled={pending}>
         {pending ? "入室中…" : "入室する"}
       </Button>
     </form>
