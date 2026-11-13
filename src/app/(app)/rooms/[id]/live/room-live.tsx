@@ -241,6 +241,16 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
           void loadRoles();
           return;
         }
+        if (action === "evacuate" || action === "deleted") {
+          // 一斉退出・部屋の削除：操作した本人以外は退室扱い（セッションはサーバー側で閉じられている）
+          if (userId === me.id) return;
+          // サーバー側で退室の処理が終わるのを少し待ってから移動する
+          setTimeout(() => {
+            void untrack();
+            router.replace(`/sessions/${session.id}/done?removed=${action}`);
+          }, 1500);
+          return;
+        }
         if (userId === me.id) {
           // 自分がキック・BAN された（セッションはサーバー側で閉じられている）
           void untrack();
@@ -385,6 +395,25 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
     }
   }
 
+  async function evacuate(): Promise<string | null> {
+    const { error } = await createClient().rpc("evacuate_room", { p_room_id: room.id });
+    if (error) return rpcErrorMessage(error);
+    await sendModeration(me.id, "evacuate");
+    return null;
+  }
+
+  async function deleteRoom(): Promise<string | null> {
+    // 削除すると自分のセッションも閉じられ、この部屋のチャンネルに送れなくなるので、先に知らせる
+    // （受け取った側は少し待ってから移動する。削除に失敗した場合は、記録画面から部屋に戻される）
+    await sendModeration(me.id, "deleted");
+    const { error } = await createClient().rpc("delete_room", { p_room_id: room.id });
+    if (error) return rpcErrorMessage(error);
+    await untrack();
+    // 自分のセッションも閉じられているので、記録画面へ
+    router.replace(`/sessions/${session.id}/done?removed=deleted-by-me`);
+    return null;
+  }
+
   async function changeTheme(next: RoomTheme): Promise<string | null> {
     const { error } = await createClient().from("rooms").update({ theme: next }).eq("id", room.id);
     if (error) return "テーマを変更できませんでした";
@@ -487,6 +516,8 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
             onChangeTheme={changeTheme}
             timerRunning={timerStartedAt !== null}
             onStartTimer={startTimer}
+            onEvacuate={evacuate}
+            onDeleteRoom={deleteRoom}
           />
         )}
       </header>

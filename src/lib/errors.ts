@@ -15,6 +15,8 @@ const MESSAGES: Record<string, string> = {
   session_not_found: "記録が見つかりません",
   session_not_ended: "まだ退室していません",
   invalid_note: "メモは280文字以内にしてください",
+  ng_word_profile: "表示名か自己紹介に使えない言葉が含まれています",
+  confirm_mismatch: "確認のユーザーIDが違います",
   item_locked: "まだ解放されていないアイテムです",
   invalid_avatar: "選べないパーツが含まれています",
   forbidden: "この操作はオーナー・モデレーターだけができます",

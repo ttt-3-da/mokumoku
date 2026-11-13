@@ -10,6 +10,14 @@ import { NoteForm } from "./note-form";
 
 export const metadata: Metadata = { title: "おつかれさま" };
 
+const REMOVED_MESSAGE: Record<string, string> = {
+  kick: "オーナーによって、この部屋から退室になりました。",
+  ban: "オーナーによって、この部屋から退室になりました（この部屋にはもう入れません）。",
+  evacuate: "オーナーが全員を退室させたため、退室になりました。",
+  deleted: "オーナーがこの部屋を削除したため、退室になりました。",
+  "deleted-by-me": "部屋を削除しました。",
+};
+
 export default async function SessionDonePage({ params, searchParams }: PageProps<"/sessions/[id]/done">) {
   const { id } = await params;
   const { removed } = await searchParams;
@@ -43,11 +51,9 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
     <div className="mx-auto flex max-w-md flex-col items-center gap-5 py-4">
       <Mochi avatar={avatar} size={120} seed={me.id} celebrate={minutes >= 1} className="animate-mochi-drop" />
       <h1 className="text-2xl font-bold">おつかれさま！</h1>
-      {(removed === "kick" || removed === "ban") && (
+      {typeof removed === "string" && REMOVED_MESSAGE[removed] && (
         <p role="status" className="w-full rounded-2xl bg-kinako/30 px-4 py-2 text-center text-sm">
-          {removed === "ban"
-            ? "オーナーによって、この部屋から退室になりました（この部屋にはもう入れません）。"
-            : "オーナーによって、この部屋から退室になりました。"}
+          {REMOVED_MESSAGE[removed]}
         </p>
       )}
 

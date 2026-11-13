@@ -5,7 +5,7 @@ import { AuthForm } from "./auth-form";
 export const metadata: Metadata = { title: "ログイン" };
 
 export default async function LoginPage({ searchParams }: PageProps<"/login">) {
-  const { next } = await searchParams;
+  const { next, deleted } = await searchParams;
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
@@ -14,6 +14,11 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <h1 className="text-3xl font-bold tracking-wide">Mokumoku</h1>
           <p className="text-sm text-ink-soft">おしゃべりなしの、もくもく自習室。</p>
         </div>
+        {deleted === "1" && (
+          <p role="status" className="mb-4 rounded-2xl bg-paper px-4 py-3 text-center text-sm shadow-sm">
+            退会しました。これまで使ってくれてありがとうございました。
+          </p>
+        )}
         <AuthForm next={typeof next === "string" ? next : ""} />
       </div>
     </main>

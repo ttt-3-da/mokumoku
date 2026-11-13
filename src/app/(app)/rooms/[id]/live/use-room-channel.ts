@@ -12,6 +12,13 @@ import type { PresenceMeta, PresenceStatus } from "@/lib/types";
 
 export type ConnectionState = "connecting" | "live" | "error";
 
+/**
+ * オーナー・モデレーターの操作の通知。kick・ban は userId が対象者、
+ * evacuate（一斉退出）・deleted（部屋の削除）は userId が操作した人、role は設定の変更（取り直しの合図）
+ */
+export const MODERATION_ACTIONS = ["kick", "ban", "role", "evacuate", "deleted"] as const;
+export type ModerationAction = (typeof MODERATION_ACTIONS)[number];
+
 type Self = {
   userId: string;
   displayName: string;
@@ -33,7 +40,7 @@ type Handlers = {
   /** 接続・再接続できた（取りこぼしたイベントを DB から取り直すため） */
   onSubscribed: () => void;
   /** オーナー・モデレーターがだれかをキック・BAN した（役割の変更も含めて画面を更新する合図） */
-  onModeration: (ev: { userId: string; action: "kick" | "ban" | "role" }) => void;
+  onModeration: (ev: { userId: string; action: ModerationAction }) => void;
 };
 
 /**
@@ -77,8 +84,8 @@ export function useRoomChannel({ roomId, self, handlers }: { roomId: string; sel
       })
       .on("broadcast", { event: "moderation" }, ({ payload }) => {
         const p = payload as { userId?: unknown; action?: unknown };
-        if (typeof p?.userId === "string" && (p.action === "kick" || p.action === "ban" || p.action === "role")) {
-          handlersRef.current.onModeration({ userId: p.userId, action: p.action });
+        if (typeof p?.userId === "string" && MODERATION_ACTIONS.includes(p.action as ModerationAction)) {
+          handlersRef.current.onModeration({ userId: p.userId, action: p.action as ModerationAction });
         }
       })
       .on("broadcast", { event: "timer" }, ({ payload }) => {
@@ -170,6 +177,6 @@ export function useRoomChannel({ roomId, self, handlers }: { roomId: string; sel
     sendStamp: (ev: StampEvent) => send("stamp", ev),
     sendEmote: (ev: EmoteEvent) => send("emote", ev),
     sendTimer: (startedAt: string) => send("timer", { startedAt }),
-    sendModeration: (userId: string, action: "kick" | "ban" | "role") => send("moderation", { userId, action }),
+    sendModeration: (userId: string, action: ModerationAction) => send("moderation", { userId, action }),
   };
 }

@@ -22,6 +22,8 @@ export function OwnerMenu({
   onChangeTheme,
   timerRunning,
   onStartTimer,
+  onEvacuate,
+  onDeleteRoom,
 }: {
   room: Room;
   isOwner: boolean;
@@ -29,6 +31,8 @@ export function OwnerMenu({
   onChangeTheme: (t: RoomTheme) => Promise<string | null>;
   timerRunning: boolean;
   onStartTimer: () => Promise<string | null>;
+  onEvacuate: () => Promise<string | null>;
+  onDeleteRoom: () => Promise<string | null>;
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl bg-cream p-3 text-sm">
@@ -37,6 +41,7 @@ export function OwnerMenu({
       {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
       {isOwner && <ThemePicker theme={theme} onChange={onChangeTheme} />}
       <Bans roomId={room.id} />
+      <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
       <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
     </div>
   );
@@ -228,6 +233,69 @@ function Bans({ roomId }: { roomId: string }) {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+/** 一斉退出（オーナー・モデレーター）と部屋の削除（オーナーのみ） */
+function DangerZone({
+  isOwner,
+  onEvacuate,
+  onDeleteRoom,
+}: {
+  isOwner: boolean;
+  onEvacuate: () => Promise<string | null>;
+  onDeleteRoom: () => Promise<string | null>;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  async function run(fn: () => Promise<string | null>, confirmText: string, okText: string) {
+    if (!window.confirm(confirmText)) return;
+    setBusy(true);
+    const error = await fn();
+    setBusy(false);
+    setMessage(error ? { ok: false, text: error } : { ok: true, text: okText });
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-paper p-3">
+      <span className="font-bold text-red-700">部屋の管理</span>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="secondary"
+          className="px-3 py-1 text-xs"
+          disabled={busy}
+          onClick={() =>
+            run(onEvacuate, "あなた以外の全員を、この部屋から退室させますか？（記録はそれぞれに残ります）", "全員を退室させました")
+          }
+        >
+          一斉退出
+        </Button>
+        {isOwner && (
+          <Button
+            variant="danger"
+            className="px-3 py-1 text-xs"
+            disabled={busy}
+            onClick={() =>
+              run(
+                onDeleteRoom,
+                "この部屋を削除しますか？全員が退室し、一覧や招待URLからも消えます。元に戻せません。（みんなの記録には「削除された部屋」として残ります）",
+                "部屋を削除しました",
+              )
+            }
+          >
+            部屋を削除
+          </Button>
+        )}
+      </div>
+      <span className="text-xs text-ink-soft">
+        一斉退出は、あなた以外の全員を退室させます。{isOwner && "部屋の削除は、全員を退室させて部屋をなくします。"}
+      </span>
+      {message && (
+        <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-green-700" : "text-red-600"}`}>
+          {message.text}
+        </p>
+      )}
     </div>
   );
 }

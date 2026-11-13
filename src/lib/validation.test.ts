@@ -4,6 +4,7 @@ import {
   parseTags,
   validateDisplayName,
   validatePassword,
+  validateBio,
   validateNote,
   validateRoomInput,
   validateTask,
@@ -115,5 +116,13 @@ describe("safeNextPath", () => {
     ["/rooms/abc", "/rooms/abc"],
   ])("%s → %s", (input, expected) => {
     expect(safeNextPath(input)).toBe(expected);
+  });
+});
+
+describe("validateBio", () => {
+  it("500文字まで。空でもよい", () => {
+    expect(validateBio("").ok).toBe(true);
+    expect(validateBio("あ".repeat(500)).ok).toBe(true);
+    expect(validateBio("あ".repeat(501)).ok).toBe(false);
   });
 });

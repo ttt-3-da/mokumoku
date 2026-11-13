@@ -154,3 +154,11 @@ export function validateNote(raw: string): Result<string> {
   if (charLength(v) > NOTE_MAX) return ng(`メモは${NOTE_MAX}文字以内にしてください`);
   return ok(v);
 }
+
+export const BIO_MAX = 500;
+
+export function validateBio(raw: string): Result<string> {
+  const v = raw.trim();
+  if (charLength(v) > BIO_MAX) return ng(`自己紹介は${BIO_MAX}文字以内にしてください`);
+  return ok(v);
+}

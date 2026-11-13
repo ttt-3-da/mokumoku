@@ -7,6 +7,12 @@ export type Profile = {
   username: string;
   display_name: string;
   created_at: string;
+  /** 自己紹介（500文字以内） */
+  bio: string;
+  /** false ならプロフィールと検索から隠す */
+  is_public: boolean;
+  /** false なら学習の統計を本人以外に見せない */
+  stats_public: boolean;
 };
 
 export type Visibility = "public" | "unlisted" | "approval";
@@ -14,7 +20,8 @@ export type TimerMode = "pomodoro" | "free";
 
 export type Room = {
   id: string;
-  owner_id: string;
+  /** オーナーが退会した部屋は null */
+  owner_id: string | null;
   name: string;
   description: string;
   icon: string;
@@ -30,6 +37,7 @@ export type Room = {
   theme: RoomTheme;
   created_at: string;
   closed_at: string | null;
+  deleted_at: string | null;
 };
 
 /** ロビーのカード表示用（在室人数付き） */
