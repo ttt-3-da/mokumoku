@@ -51,10 +51,14 @@ export function RoomScene({
           <div className="h-24 sm:h-28" aria-hidden />
         </>
       ) : (
-        <div className="relative flex items-end justify-center gap-4 px-4 pt-4" aria-hidden>
-          <Decor theme={theme} side="left" />
+        <div className="relative flex items-end justify-center gap-2 px-4 pt-4 sm:gap-4" aria-hidden>
+          <DecorSlot>
+            <Decor theme={theme} side="left" />
+          </DecorSlot>
           <Window theme={theme} tod={tod} />
-          <Decor theme={theme} side="right" />
+          <DecorSlot>
+            <Decor theme={theme} side="right" />
+          </DecorSlot>
         </div>
       )}
       {t.backdrop === "scene" && <TimeTint tod={tod} alwaysNight={Boolean(t.alwaysNight)} />}
@@ -91,7 +95,7 @@ function Window({ theme, tod }: { theme: RoomTheme; tod: TimeOfDay }) {
   const wide = theme === "train";
   return (
     <div
-      className={`relative h-20 overflow-hidden border-4 ${wide ? "w-56 rounded-2xl sm:w-80" : "w-40 sm:w-56"} ${arched ? "rounded-t-[999px] rounded-b-md" : "rounded-xl"}`}
+      className={`relative h-20 overflow-hidden border-4 ${wide ? "w-44 rounded-2xl sm:w-80" : "w-40 sm:w-56"} ${arched ? "rounded-t-[999px] rounded-b-md" : "rounded-xl"}`}
       style={{
         background: space ? "radial-gradient(circle at 30% 40%, #3b4675, #0d1022)" : `linear-gradient(${skyTop}, ${skyBottom})`,
         borderColor: frame,
@@ -189,6 +193,15 @@ function TrainScenery({ tod }: { tod: TimeOfDay }) {
 
 // ---------------------------------------------------------------- 窓の左右の飾り
 
+/** スマホでは本棚や掛け軸を小さくして、窓の横に収める */
+function DecorSlot({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex w-14 shrink-0 justify-center sm:w-auto">
+      <div className="origin-bottom max-sm:scale-[0.7]">{children}</div>
+    </div>
+  );
+}
+
 function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
   switch (theme) {
     case "library":
@@ -196,7 +209,7 @@ function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
     case "castle":
       // 本棚（お城は背が高い）
       return (
-        <div className={`hidden w-16 flex-col justify-around rounded-md bg-[#b08b5c] p-1 sm:flex ${theme === "castle" ? "h-20 bg-[#6b4029]" : "h-16"}`}>
+        <div className={`flex w-16 flex-col justify-around rounded-md bg-[#b08b5c] p-1 ${theme === "castle" ? "h-20 bg-[#6b4029]" : "h-16"}`}>
           {(theme === "castle" ? [0, 1, 2] : [0, 1]).map((row) => (
             <div key={row} className="flex h-5 items-end gap-0.5 rounded-sm bg-[#8d6446] px-0.5">
               {["#e98aa1", "#8fb98b", "#8ec6de", "#e6c88f", "#cdb7e6"].map((c, i) => (
@@ -209,7 +222,7 @@ function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
       );
     case "cafe":
       return (
-        <div className="hidden h-16 flex-col items-center sm:flex">
+        <div className="flex h-16 flex-col items-center">
           <span className="h-8 w-0.5 bg-[#8d6446]" />
           <span className="h-4 w-8 rounded-t-full bg-[#e6c88f]" />
           <span className="h-2 w-6 rounded-full bg-[#fff2b3]/80" />
@@ -217,41 +230,41 @@ function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
       );
     case "washitsu":
       return (
-        <div className="hidden h-16 w-8 flex-col items-center rounded-sm bg-[#f8f3e6] py-1 shadow sm:flex">
+        <div className="flex h-16 w-8 flex-col items-center rounded-sm bg-[#f8f3e6] py-1 shadow">
           <span className="h-1 w-full bg-[#8d6446]" />
           <span className="mt-2 text-[10px] leading-none text-[#3f3a36] [writing-mode:vertical-rl]">{side === "left" ? "集中" : "一歩"}</span>
         </div>
       );
     case "space":
       return (
-        <div className="hidden h-12 w-12 items-center justify-center rounded-full border-4 border-[#8d96c4] bg-[#1a1f3d] sm:flex">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-[#8d96c4] bg-[#1a1f3d]">
           <span className="h-2 w-2 animate-pulse rounded-full bg-[#8fb98b]" />
         </div>
       );
     case "classroom":
       return side === "left" ? (
         // 黒板
-        <div className="hidden h-14 w-24 flex-col justify-center gap-1 rounded border-4 border-[#a87b5a] bg-[#3f6b4f] px-2 sm:flex">
+        <div className="flex h-14 w-24 flex-col justify-center gap-1 rounded border-4 border-[#a87b5a] bg-[#3f6b4f] px-2">
           <span className="h-0.5 w-12 bg-white/70" />
           <span className="h-0.5 w-16 bg-white/50" />
           <span className="h-0.5 w-8 bg-white/60" />
         </div>
       ) : (
         // 時計
-        <div className="relative hidden h-11 w-11 items-center justify-center rounded-full border-4 border-[#8d6446] bg-white sm:flex">
+        <div className="relative flex h-11 w-11 items-center justify-center rounded-full border-4 border-[#8d6446] bg-white">
           <span className="absolute h-3.5 w-0.5 -translate-y-1.5 bg-[#3f3a36]" />
         </div>
       );
     case "kotatsu":
       return side === "left" ? (
         // みかんのかご
-        <div className="hidden h-10 w-14 items-end justify-center rounded-b-xl bg-[#c9a574] pb-1 sm:flex">
+        <div className="flex h-10 w-14 items-end justify-center rounded-b-xl bg-[#c9a574] pb-1">
           <span className="-mb-3 h-4 w-4 rounded-full bg-[#ffa53d]" />
           <span className="-mb-3 h-4 w-4 rounded-full bg-[#ffb34d]" />
           <span className="-mb-1 h-4 w-4 rounded-full bg-[#ff9f2e]" />
         </div>
       ) : (
-        <div className="hidden h-12 w-10 flex-col items-center sm:flex">
+        <div className="flex h-12 w-10 flex-col items-center">
           <span className="h-8 w-8 rounded-full bg-[#7cbf6a]" />
           <span className="h-4 w-6 rounded-b-md bg-[#d9a066]" />
         </div>
@@ -259,13 +272,13 @@ function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
     case "lodge":
       return side === "left" ? (
         // 暖炉
-        <div className="hidden h-16 w-16 items-end justify-center rounded-t-lg bg-[#8a8178] p-1.5 sm:flex">
+        <div className="flex h-16 w-16 items-end justify-center rounded-t-lg bg-[#8a8178] p-1.5">
           <div className="flex h-9 w-full items-end justify-center rounded-t-md bg-[#2b2522] pb-1">
             <span className="scene-flame h-5 w-4 rounded-full bg-[#ff9c3d] shadow-[0_0_14px_6px_rgba(255,156,61,0.45)]" />
           </div>
         </div>
       ) : (
-        <div className="hidden h-14 w-10 flex-col items-center gap-0.5 sm:flex">
+        <div className="flex h-14 w-10 flex-col items-center gap-0.5">
           <span className="h-3 w-9 rounded bg-[#6e4e34]" />
           <span className="h-3 w-9 rounded bg-[#7a5a3e]" />
           <span className="h-3 w-9 rounded bg-[#6e4e34]" />
@@ -274,7 +287,7 @@ function Decor({ theme, side }: { theme: RoomTheme; side: "left" | "right" }) {
     case "train":
       // つり革
       return (
-        <div className="hidden h-16 w-8 flex-col items-center sm:flex">
+        <div className="flex h-16 w-8 flex-col items-center">
           <span className="h-8 w-0.5 bg-[#a89b8c]" />
           <span className="scene-sway h-5 w-5 rounded-full border-[3px] border-[#e8d9b0]" />
         </div>

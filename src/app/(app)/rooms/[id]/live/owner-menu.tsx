@@ -261,7 +261,12 @@ function ThemePicker({
 
   useEffect(() => {
     const t = setTimeout(() => void load(), 0);
-    return () => clearTimeout(t);
+    // 勉強中の分も🍅に入るので、開いている間はときどき読み直す
+    const id = setInterval(() => void load(), 60_000);
+    return () => {
+      clearTimeout(t);
+      clearInterval(id);
+    };
   }, [load]);
 
   const priceOf = (id: string) => shop?.items.find((i) => i.theme === id)?.price;
