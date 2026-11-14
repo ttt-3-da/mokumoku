@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { MobileMenu, NavLinks } from "./nav-links";
+import { ReturnToRoom } from "./return-to-room";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireProfile();
@@ -45,6 +46,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             </button>
           </form>
         </div>
+        <ReturnToRoom userId={profile.id} />
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
     </>

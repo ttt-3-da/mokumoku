@@ -24,7 +24,9 @@ export function OwnerMenu({
   onStartTimer,
   onEvacuate,
   onDeleteRoom,
+  onClose,
 }: {
+  onClose: () => void;
   room: Room;
   isOwner: boolean;
   theme: RoomTheme;
@@ -36,6 +38,9 @@ export function OwnerMenu({
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-2xl bg-cream p-3 text-sm">
+      <button type="button" onClick={onClose} className="self-start rounded-full bg-paper px-3 py-1 font-bold shadow-sm hover:bg-sakura/20">
+        ← 部屋に戻る
+      </button>
       <InviteLink code={room.invite_code} />
       {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
       {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
@@ -44,6 +49,16 @@ export function OwnerMenu({
       <Bans roomId={room.id} />
       <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
       <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
+      <button
+        type="button"
+        onClick={() => {
+          onClose();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        className="w-full rounded-full bg-paper px-3 py-2 font-bold shadow-sm hover:bg-sakura/20"
+      >
+        ← 部屋に戻る
+      </button>
     </div>
   );
 }

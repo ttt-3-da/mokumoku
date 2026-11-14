@@ -392,9 +392,12 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
 
   // 部屋の画面からほかのページへのリンクを押したら、退室してよいか聞く
   // （ページを離れるとハートビートが止まり、3分後に退室になるため）
+  // 休憩中はページを離れても退室にならない（サーバーが休憩が終わるまで待つ）ので聞かない
   const leaveRef = useRef(leave);
+  const onBreakRef = useRef(false);
   useEffect(() => {
     leaveRef.current = leave;
+    onBreakRef.current = room.timer_mode === "pomodoro" && timer.kind === "break";
   });
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -403,6 +406,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
       if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      if (onBreakRef.current) return;
       e.preventDefault();
       e.stopPropagation();
       if (!window.confirm("ほかのページに移ると、部屋から退室したことになります。よろしいですか？")) return;
@@ -547,6 +551,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
         />
         {staffNow && menuOpen && (
           <OwnerMenu
+            onClose={() => setMenuOpen(false)}
             room={room}
             isOwner={myRole === "owner"}
             theme={theme}
