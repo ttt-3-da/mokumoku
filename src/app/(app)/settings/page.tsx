@@ -19,6 +19,9 @@ export default async function SettingsPage() {
             着せかえ
           </Link>{" "}
           から変えられます。
+          <Link href="/lobby?tour=1" className="ml-2 underline">
+            使い方をもう一度見る
+          </Link>
         </p>
       </div>
 

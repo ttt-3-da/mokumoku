@@ -13,5 +13,12 @@ export async function signUp(page: Page, username = uniqueUsername(), displayNam
   await page.getByLabel("パスワード").fill("mochi-password-123");
   await page.getByRole("button", { name: "はじめる" }).click();
   await expect(page).toHaveURL(/\/lobby/);
+  await skipTour(page);
   return username;
+}
+
+/** 新規登録の直後に出る使い方の案内を閉じる */
+export async function skipTour(page: Page) {
+  await page.getByRole("dialog", { name: "ようこそ、Mokumoku へ！" }).getByRole("button", { name: "とばす" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 }

@@ -30,13 +30,13 @@ export function NavLinks({ username }: { username: string }) {
       className="-mx-1 hidden min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap sm:flex"
     >
       {navLinks(username)
-        .filter((l) => l.href !== "/shop") // ショップはヘッダーの 🪙 から行ける
         .map((l) => {
           const active = isActive(pathname, l.href);
           return (
             <Link
               key={l.href}
               href={l.href}
+              data-tour={`nav-${l.href.slice(1)}`}
               aria-current={active ? "page" : undefined}
               className={`rounded-full px-3 py-1.5 transition ${active ? "bg-paper font-bold shadow-sm" : "text-ink-soft hover:bg-paper"}`}
             >
@@ -93,6 +93,7 @@ export function MobileMenu({ username }: { username: string }) {
             requestAnimationFrame(() => setOpen(true)),
           );
         }}
+        data-tour="menu"
         aria-label="メニューを開く"
         aria-expanded={open}
         aria-controls="mobile-menu"

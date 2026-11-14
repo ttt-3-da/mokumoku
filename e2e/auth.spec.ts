@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { uniqueUsername } from "./helpers";
+import { skipTour, uniqueUsername } from "./helpers";
 
 test("新規登録 → ログアウト → ログインできる", async ({ page }) => {
   const username = uniqueUsername();
@@ -15,6 +15,14 @@ test("新規登録 → ログアウト → ログインできる", async ({ page
   await page.getByRole("button", { name: "はじめる" }).click();
 
   await expect(page).toHaveURL(/\/lobby/);
+  // 登録直後は使い方の案内が出る。最後まで進めて閉じる
+  const tour = page.getByRole("dialog");
+  await expect(tour).toContainText("ようこそ");
+  for (let i = 0; i < 7; i++) await tour.getByRole("button", { name: "つぎへ" }).click();
+  await tour.getByRole("button", { name: "はじめる" }).click();
+  await expect(tour).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL(/\/login/);
 
@@ -34,6 +42,7 @@ test("同じユーザーIDでは登録できない", async ({ page }) => {
     await page.getByRole("button", { name: "はじめる" }).click();
     if (attempt === 1) {
       await expect(page).toHaveURL(/\/lobby/);
+      await skipTour(page);
       await page.getByRole("button", { name: "ログアウト" }).click();
       await expect(page).toHaveURL(/\/login/);
     } else {

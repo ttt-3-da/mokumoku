@@ -8,7 +8,8 @@ import { RoomCard } from "@/components/room-card";
 import { parseAvatar } from "@/lib/avatar";
 import type { FollowingActivity as FollowingActivityRow } from "@/lib/follow";
 import { ButtonLink, inputClass } from "@/components/ui";
-import { createClient } from "@/lib/supabase/server";
+import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
+import { Tour } from "./tour";
 import type { RoomCard as RoomCardData } from "@/lib/types";
 
 export const metadata: Metadata = { title: "ロビー" };
@@ -23,6 +24,8 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const tag = param(sp.tag).slice(0, 15);
 
   const supabase = await createClient();
+  const me = await requireProfile();
+  const avatar = await getAvatar(me.id);
   const now = new Date();
   const monday = isMondayInJapan(now);
   const [publicRes, mineRes, activityRes, progressRes, upcomingRes, summaryRes] = await Promise.all([
@@ -49,14 +52,19 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
 
   return (
     <div className="flex flex-col gap-8">
+      <Tour open={param(sp.tour) === "1"} avatar={avatar} />
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">ロビー</h1>
-        <ButtonLink href="/rooms/new" className="ml-auto">
+        <ButtonLink href="/rooms/new" className="ml-auto" data-tour="create-room">
           ＋ 部屋をつくる
         </ButtonLink>
       </div>
 
-      {!filtering && progress && <WeeklyGoalBar progress={progress} isMe />}
+      {!filtering && progress && (
+        <div data-tour="goal">
+          <WeeklyGoalBar progress={progress} isMe />
+        </div>
+      )}
       {!filtering && summary && <LastWeekCard summary={summary} />}
       {!filtering && upcoming.length > 0 && <UpcomingSchedules items={upcoming} now={now.getTime()} />}
 
@@ -122,11 +130,11 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
         {publicRes.error ? (
           <p className="text-sm text-red-600">部屋を読み込めませんでした。</p>
         ) : publicRooms.length === 0 ? (
-          <p className="rounded-3xl border border-dashed border-line p-8 text-center text-sm text-ink-soft">
+          <p data-tour="rooms" className="rounded-3xl border border-dashed border-line p-8 text-center text-sm text-ink-soft">
             {filtering ? "条件に合う部屋はありません。" : "まだ部屋がありません。最初の部屋をつくってみませんか？"}
           </p>
         ) : (
-          <RoomGrid rooms={publicRooms} />
+          <RoomGrid rooms={publicRooms} tourFirst />
         )}
       </section>
     </div>
@@ -140,11 +148,12 @@ function lobbyHref(q: string, tag: string) {
   return `/lobby?${params}`;
 }
 
-function RoomGrid({ rooms }: { rooms: RoomCardData[] }) {
+/** tourFirst：最初の部屋を使い方の案内で指す */
+function RoomGrid({ rooms, tourFirst = false }: { rooms: RoomCardData[]; tourFirst?: boolean }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {rooms.map((r) => (
-        <li key={r.id}>
+      {rooms.map((r, i) => (
+        <li key={r.id} data-tour={tourFirst && i === 0 ? "rooms" : undefined}>
           <RoomCard room={r} />
         </li>
       ))}

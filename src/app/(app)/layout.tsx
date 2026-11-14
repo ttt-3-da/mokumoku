@@ -21,6 +21,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <NavLinks username={profile.username} />
           <Link
             href="/shop"
+            data-tour="coins"
             className="ml-auto shrink-0 rounded-full bg-paper px-2.5 py-1 text-sm font-bold tabular-nums shadow-sm hover:bg-sakura/20"
             aria-label={`所持コイン ${wallet.coins}枚（ショップへ）`}
           >
