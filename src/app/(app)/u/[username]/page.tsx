@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminActions } from "@/components/admin-actions";
+import { AdminEditProfile } from "@/components/admin-edit-profile";
 import { OfficialBadge } from "@/components/official-badge";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { BadgeGrid } from "@/components/badge-grid";
@@ -93,6 +94,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
               </p>
             )}
             {!isMe && me.is_admin && <AccessInfo access={access as Access | null} />}
+            {!isMe && me.is_admin && <AdminEditProfile key={`${profile.display_name}-${profile.bio}`} userId={profile.id} displayName={profile.display_name} bio={profile.bio ?? ""} />}
             {!isMe && me.is_admin && (
               <AdminActions
                 className="mt-3"
