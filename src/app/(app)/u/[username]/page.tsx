@@ -39,13 +39,14 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   if (!data) return <NotAvailable />;
   const profile = data as Profile;
   const isMe = profile.id === me.id;
-  const [avatar, unlocks, { data: statsData }, { data: followData }, { data: progressData }, { data: badgeData }] = await Promise.all([
+  const [avatar, unlocks, { data: statsData }, { data: followData }, { data: progressData }, { data: badgeData }, { data: access }] = await Promise.all([
     getAvatar(profile.id),
     getUnlocks(profile.id),
     supabase.rpc("get_profile_stats", { p_username: profile.username }),
     supabase.rpc("get_follow_info", { p_username: profile.username }),
     supabase.rpc("get_weekly_progress", { p_username: profile.username }),
     supabase.rpc("list_user_badges", { p_username: profile.username }),
+    me.is_admin && !isMe ? supabase.rpc("admin_get_access", { p_user_id: profile.id }) : Promise.resolve({ data: null }),
   ]);
   const progress = parseWeeklyProgress(progressData);
   const badges = new Map<BadgeId, string>();
@@ -91,6 +92,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
                 {!isMe && follow.follows_me && <span className="rounded-full bg-cream px-2 text-xs leading-5">フォローされています</span>}
               </p>
             )}
+            {!isMe && me.is_admin && <AccessInfo access={access as Access | null} />}
             {!isMe && me.is_admin && (
               <AdminActions
                 className="mt-3"
@@ -177,5 +179,28 @@ function NotAvailable() {
         ユーザーをさがす
       </ButtonLink>
     </div>
+  );
+}
+
+type Access = { first_country: string | null; first_seen_at: string; last_country: string | null; last_seen_at: string };
+
+function countryName(code: string | null) {
+  if (!code) return "不明";
+  try {
+    return `${new Intl.DisplayNames(["ja"], { type: "region" }).of(code) ?? code}（${code}）`;
+  } catch {
+    return code;
+  }
+}
+
+/** 管理者だけに見せる、アクセスした国（IP は記録していない） */
+function AccessInfo({ access }: { access: Access | null }) {
+  const at = (iso: string) => new Date(iso).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", dateStyle: "short", timeStyle: "short" });
+  return (
+    <p className="mt-3 text-xs text-ink-soft">
+      {access
+        ? `アクセスした国：はじめ ${countryName(access.first_country)}・${at(access.first_seen_at)} ／ 最近 ${countryName(access.last_country)}・${at(access.last_seen_at)}`
+        : "アクセスした国：まだ記録がありません"}
+    </p>
   );
 }

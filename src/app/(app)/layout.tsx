@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 import { MobileMenu, NavLinks } from "./nav-links";
@@ -6,7 +7,13 @@ import { ReturnToRoom } from "./return-to-room";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const profile = await requireProfile();
-  const { data: unread } = await (await createClient()).rpc("count_unread_notifications");
+  const supabase = await createClient();
+  // アクセスした国を記録する（IP は記録しない。Vercel が付けるヘッダーから国だけ読む）
+  const country = (await headers()).get("x-vercel-ip-country");
+  const [{ data: unread }] = await Promise.all([
+    supabase.rpc("count_unread_notifications"),
+    supabase.rpc("touch_access", { p_country: country ?? "" }),
+  ]);
   const unreadCount = typeof unread === "number" ? unread : 0;
   const wallet = await getWallet();
 
