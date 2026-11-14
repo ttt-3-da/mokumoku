@@ -40,6 +40,7 @@ import {
 } from "@/lib/emotes";
 import { REACTION_EMOJIS, type PresenceMeta, type ReactionEmoji, type Room, type StudySession } from "@/lib/types";
 import { TASK_MAX, validateTask } from "@/lib/validation";
+import { IdleDialog, useIdleCheck } from "./idle-check";
 import { MemberActions, type RoomRole } from "./member-actions";
 import { OwnerMenu } from "./owner-menu";
 import { RoomScene } from "./room-scene";
@@ -337,7 +338,9 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
   }, [neighborPairs]);
 
   // ---------------------------------------------------------------- ハートビート
+  const idle = useIdleCheck();
   useHeartbeat({
+    getIdleSeconds: idle.getIdleSeconds,
     userId: me.id,
     task,
     enabled: !accountSwitched,
@@ -466,6 +469,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
 
   return (
     <div className={`flex flex-col gap-5 ${hidden ? "anim-paused" : ""}`}>
+      {idle.asking && <IdleDialog remainingMs={idle.remainingMs} avatar={me.avatar} seed={me.id} muted={muted} />}
       <header className="flex flex-col gap-3 rounded-3xl border border-line bg-paper p-4 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="text-2xl" aria-hidden>

@@ -33,6 +33,12 @@ export function useServerOffset(): number {
 
 export const HEARTBEAT_MS = 60_000;
 
+const BEAT_NOW_EVENT = "mokumoku:beat-now";
+/** 次の定期の回を待たずにハートビートを送る */
+export function beatNow() {
+  window.dispatchEvent(new Event(BEAT_NOW_EVENT));
+}
+
 type HeartbeatResult = { session_id: string; room_id: string; timer_started_at: string | null };
 
 /**
@@ -48,19 +54,22 @@ export function useHeartbeat({
   onBeat,
   onLost,
   onAccountSwitched,
+  getIdleSeconds,
 }: {
   userId: string;
   task: string;
+  /** 最後に操作してから何秒たったか（サーバーが、操作のないまま35分たったら退室にする） */
+  getIdleSeconds: () => number;
   enabled: boolean;
   onBeat: (r: HeartbeatResult) => void;
   onLost: () => void;
   /** 同じブラウザの別タブで、別のユーザーにログインし直された */
   onAccountSwitched: () => void;
 }) {
-  const cbRef = useRef({ onBeat, onLost, onAccountSwitched });
+  const cbRef = useRef({ onBeat, onLost, onAccountSwitched, getIdleSeconds });
   const taskRef = useRef(task);
   useEffect(() => {
-    cbRef.current = { onBeat, onLost, onAccountSwitched };
+    cbRef.current = { onBeat, onLost, onAccountSwitched, getIdleSeconds };
   });
 
   // ログイン情報（Cookie）はタブ間で共有される。別タブで別のユーザーにログインすると、
@@ -86,7 +95,10 @@ export function useHeartbeat({
         return;
       }
       if (stopped) return;
-      const { data, error } = await createClient().rpc("heartbeat", { p_task: withTask });
+      const { data, error } = await createClient().rpc("heartbeat", {
+        p_task: withTask,
+        p_idle_seconds: cbRef.current.getIdleSeconds(),
+      });
       if (stopped) return;
       if (error) {
         if (error.message === "no_active_session") {
@@ -109,10 +121,14 @@ export function useHeartbeat({
       if (document.visibilityState === "visible") void beat(null);
     };
     document.addEventListener("visibilitychange", onVisible);
+    // 「続ける」を押したときなど、すぐ送りたいとき
+    const onNow = () => void beat(null);
+    window.addEventListener(BEAT_NOW_EVENT, onNow);
     return () => {
       stopped = true;
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener(BEAT_NOW_EVENT, onNow);
     };
   }, [task, userId, enabled]);
 }

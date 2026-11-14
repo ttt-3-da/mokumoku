@@ -92,6 +92,8 @@ export type StudySession = {
   pomodoros: number;
   /** 自分だけのメモ */
   note: string;
+  /** 自動で退室になった理由（idle: 35分操作なし、cap: 12時間の上限） */
+  end_reason?: "idle" | "cap" | null;
 };
 
 export type PresenceStatus = "focus" | "break" | "away";

@@ -57,6 +57,13 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
     <div className="mx-auto flex max-w-md flex-col items-center gap-5 py-4">
       <Mochi avatar={avatar} size={120} seed={me.id} celebrate={minutes >= 1} className="animate-mochi-drop" />
       <h1 className="text-2xl font-bold">おつかれさま！</h1>
+      {session.end_reason && (
+        <p role="status" className="w-full rounded-2xl bg-kinako/30 px-4 py-2 text-center text-sm">
+          {session.end_reason === "idle"
+            ? `しばらく画面の操作がなかったので、最後に操作した ${new Date(session.ended_at).toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" })} で退室にしました。`
+            : "1回の記録は12時間までなので、自動で退室にしました。"}
+        </p>
+      )}
       {typeof removed === "string" && REMOVED_MESSAGE[removed] && (
         <p role="status" className="w-full rounded-2xl bg-kinako/30 px-4 py-2 text-center text-sm">
           {REMOVED_MESSAGE[removed]}

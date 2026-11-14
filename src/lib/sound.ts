@@ -27,6 +27,11 @@ export const SOUNDS = {
     { freq: 587.33, at: 0, dur: 0.18, type: "triangle", gain: 0.32 },
     { freq: 880, at: 0.09, dur: 0.28, type: "triangle", gain: 0.28 },
   ],
+  // 「まだ勉強中？」：ぽーん、ぽーん
+  idleAsk: [
+    { freq: 880, at: 0, dur: 0.5 },
+    { freq: 880, at: 0.7, dur: 0.6 },
+  ],
   // スタンプが届いた：キラッ
   stamp: [
     { freq: 1567.98, at: 0, dur: 0.14, type: "triangle", gain: 0.26 },
