@@ -61,3 +61,29 @@ test("2人目が入室すると、1人目の画面にリアルタイムで表示
   await expect(a.getByText("もちB")).toBeVisible({ timeout: 15_000 });
   await expect(a.getByText("英語")).toBeVisible();
 });
+
+test("部屋からロビーへのリンクを押すと、退室してよいか聞かれる", async ({ page }) => {
+  await signUp(page, undefined, "うろうろもち");
+  await page.goto("/rooms/new");
+  await page.getByLabel("部屋名").fill(`移動確認 ${Date.now()}`);
+  await page.getByRole("button", { name: "部屋をつくる" }).click();
+  await page.getByLabel("今からやること").fill("確認");
+  await page.getByRole("button", { name: "入室する" }).click();
+  await expect(page.getByText("● 接続中")).toBeVisible({ timeout: 15_000 });
+  const liveUrl = page.url();
+
+  // やめると部屋に残る
+  page.once("dialog", (d) => {
+    expect(d.message()).toContain("退室したことになります");
+    void d.dismiss();
+  });
+  await page.getByRole("link", { name: "ロビー" }).first().click();
+  await expect(page).toHaveURL(/\/live$/);
+
+  // OK すると退室してロビーへ
+  page.once("dialog", (d) => void d.accept());
+  await page.getByRole("link", { name: "ロビー" }).first().click();
+  await expect(page).toHaveURL(/\/lobby$/);
+  await page.goto(liveUrl);
+  await expect(page.getByRole("button", { name: "入室する" })).toBeVisible();
+});

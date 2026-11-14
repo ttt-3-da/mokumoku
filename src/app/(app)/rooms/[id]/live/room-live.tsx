@@ -368,7 +368,8 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
   });
 
   // ---------------------------------------------------------------- 操作
-  async function leave() {
+  /** 退室する。next を渡すと、記録画面ではなくそのページへ移る */
+  async function leave(next?: string) {
     if (!(await sameAccount(me.id))) {
       setAccountSwitched(true);
       return;
@@ -386,8 +387,30 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
       return;
     }
     await untrack();
-    router.push(`/sessions/${(data as { session_id: string }).session_id}/done`);
+    router.push(next ?? `/sessions/${(data as { session_id: string }).session_id}/done`);
   }
+
+  // 部屋の画面からほかのページへのリンクを押したら、退室してよいか聞く
+  // （ページを離れるとハートビートが止まり、3分後に退室になるため）
+  const leaveRef = useRef(leave);
+  useEffect(() => {
+    leaveRef.current = leave;
+  });
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+      const url = new URL(a.href, window.location.href);
+      if (url.origin !== window.location.origin || url.pathname === window.location.pathname) return;
+      e.preventDefault();
+      e.stopPropagation();
+      if (!window.confirm("ほかのページに移ると、部屋から退室したことになります。よろしいですか？")) return;
+      void leaveRef.current(url.pathname + url.search + url.hash);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
 
   async function startTimer(): Promise<string | null> {
     const { data, error } = await createClient().rpc("start_timer", { p_room_id: room.id });
@@ -661,7 +684,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
                 ? `${members.find((m) => m.userId === target)?.displayName} さんに送る`
                 : "送る相手のもちをタップ"}
           </span>
-          <Button variant="secondary" onClick={leave} disabled={leaving} className="ml-auto">
+          <Button variant="secondary" onClick={() => void leave()} disabled={leaving} className="ml-auto">
             {leaving ? "退室中…" : "退室する"}
           </Button>
         </div>
