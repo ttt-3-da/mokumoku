@@ -219,6 +219,22 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
     await sendEmote(ev);
   }
 
+  // ---------------------------------------------------------------- 公式マーク（DB から読む。Presence の値は偽れるので使わない）
+  const [officialIds, setOfficialIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    let alive = true;
+    void createClient()
+      .from("profiles")
+      .select("id")
+      .eq("is_admin", true)
+      .then(({ data }) => {
+        if (alive && data) setOfficialIds(new Set(data.map((r) => r.id as string)));
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   // ---------------------------------------------------------------- 退室した人を少し残す（手を振って消える）
   const [departed, setDeparted] = useState<PresenceMeta[]>([]);
   const prevMembersRef = useRef<PresenceMeta[]>([]);
@@ -480,6 +496,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
   const seatMembers: SeatMember[] = [
     ...members.map((m) => ({
       ...m,
+      official: officialIds.has(m.userId),
       focusMinutes: now === null ? 0 : continuousFocusMinutes(timer, Date.parse(m.joinedAt), now),
       stopwatchMs: m.stopwatch && now !== null ? stopwatchElapsed(m.stopwatch, now) : null,
       stopwatchRunning: m.stopwatch?.since != null,

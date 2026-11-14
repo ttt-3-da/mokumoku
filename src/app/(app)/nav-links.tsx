@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-function navLinks(username: string) {
+function navLinks(username: string, isAdmin = false) {
   return [
     { href: "/lobby", label: "ロビー", icon: "🏠" },
     { href: "/timeline", label: "記録", icon: "📒" },
@@ -14,6 +14,7 @@ function navLinks(username: string) {
     { href: "/shop", label: "ショップ", icon: "🛍️" },
     { href: `/u/${username}`, label: "プロフィール", icon: "🙂" },
     { href: "/settings", label: "設定", icon: "⚙️" },
+    ...(isAdmin ? [{ href: "/admin", label: "管理", icon: "🛠️" }] : []),
   ];
 }
 
@@ -22,14 +23,14 @@ function isActive(pathname: string, href: string) {
 }
 
 /** 広い画面ではヘッダーに横並び。スマホ（縦持ち）では MobileMenu を使う */
-export function NavLinks({ username }: { username: string }) {
+export function NavLinks({ username, isAdmin = false }: { username: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   return (
     <nav
       aria-label="メニュー"
       className="-mx-1 hidden min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap sm:flex"
     >
-      {navLinks(username)
+      {navLinks(username, isAdmin)
         .map((l) => {
           const active = isActive(pathname, l.href);
           return (
@@ -49,7 +50,7 @@ export function NavLinks({ username }: { username: string }) {
 }
 
 /** スマホ用：☰ を押すと左からメニューが出る */
-export function MobileMenu({ username }: { username: string }) {
+export function MobileMenu({ username, isAdmin = false }: { username: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   // ヘッダー（backdrop-blur）の中に置くと fixed が画面全体にならないので、初めて開いたときに body 直下へ出す
@@ -134,7 +135,7 @@ export function MobileMenu({ username }: { username: string }) {
                 </button>
               </div>
               <nav aria-label="メニュー" className="flex flex-col gap-1">
-                {navLinks(username).map((l) => {
+                {[...navLinks(username, isAdmin), { href: "/feedback", label: "ご意見・不具合", icon: "✉️" }].map((l) => {
                   const active = isActive(pathname, l.href);
                   return (
                     <Link

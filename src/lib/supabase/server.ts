@@ -45,11 +45,13 @@ export const requireProfile = cache(async (): Promise<Profile> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, username, display_name, created_at, bio, is_public, stats_public, weekly_goal_minutes")
+    .select("id, username, display_name, created_at, bio, is_public, stats_public, weekly_goal_minutes, is_admin, suspended_at")
     .eq("id", userId)
     .single();
 
   if (error || !data) redirect("/login");
+  // 管理者に利用停止にされた人は、どのページも使えない
+  if (data.suspended_at) redirect("/suspended");
   return data as Profile;
 });
 

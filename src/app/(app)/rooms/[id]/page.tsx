@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AdminActions } from "@/components/admin-actions";
 import { notFound } from "next/navigation";
 import { Mochi } from "@/components/mochi";
 import { parseAvatar } from "@/lib/avatar";
@@ -61,6 +62,14 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
           </div>
         </div>
         {room.owner_id !== me.id && <ReportButton targetType="room" targetId={room.id} className="self-end" />}
+        {me.is_admin && (
+          <AdminActions
+            actions={[
+              { label: "名前と説明を消す", confirm: "この部屋の名前と説明を消しますか？", rpc: "admin_clear_room_text", args: { p_room_id: room.id } },
+              { label: "部屋を削除", confirm: "この部屋を削除しますか？在室中の人は退室になり、元に戻せません。", rpc: "admin_delete_room", args: { p_room_id: room.id }, danger: true, after: "/lobby" },
+            ]}
+          />
+        )}
         {room.description && <p className="whitespace-pre-wrap text-sm text-ink-soft">{room.description}</p>}
         <div className="flex flex-wrap items-center gap-3 text-sm">
           <TimerBadge {...room} />

@@ -15,6 +15,10 @@ export type Profile = {
   stats_public: boolean;
   /** 週の目標（分）。決めていなければ null */
   weekly_goal_minutes: number | null;
+  /** 公式（管理者）アカウント */
+  is_admin?: boolean;
+  /** 利用停止にされた時刻 */
+  suspended_at?: string | null;
 };
 
 export type Visibility = "public" | "unlisted" | "approval";

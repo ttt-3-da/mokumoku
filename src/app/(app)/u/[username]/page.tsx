@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { AdminActions } from "@/components/admin-actions";
+import { OfficialBadge } from "@/components/official-badge";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { BadgeGrid } from "@/components/badge-grid";
 import { FollowButton } from "@/components/follow-button";
@@ -31,7 +33,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   // 非公開のプロフィールは RLS で本人以外には返らない
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, display_name, created_at, bio, is_public, stats_public")
+    .select("id, username, display_name, created_at, bio, is_public, stats_public, is_admin, suspended_at")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!data) return <NotAvailable />;
@@ -69,7 +71,10 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             <DeskItem kind={avatar.desk} size={34} level={plantLevel(stats?.total_minutes ?? 0)} />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-2xl font-bold">{profile.display_name}</h1>
+            <h1 className="flex min-w-0 items-center gap-2 text-2xl font-bold">
+              <span className="truncate">{profile.display_name}</span>
+              {profile.is_admin && <OfficialBadge />}
+            </h1>
             <p className="text-sm text-ink-soft">@{profile.username}</p>
             <p className="mt-1 text-xs text-ink-soft">{joined} から参加</p>
             {isMe && !profile.is_public && (
@@ -85,6 +90,17 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
                 </Link>
                 {!isMe && follow.follows_me && <span className="rounded-full bg-cream px-2 text-xs leading-5">フォローされています</span>}
               </p>
+            )}
+            {!isMe && me.is_admin && (
+              <AdminActions
+                className="mt-3"
+                actions={[
+                  { label: "名前と自己紹介を消す", confirm: "このユーザーの表示名と自己紹介を消しますか？", rpc: "admin_clear_user_text", args: { p_user_id: profile.id } },
+                  profile.suspended_at
+                    ? { label: "利用停止を解除", confirm: "利用停止を解除しますか？", rpc: "admin_set_suspended", args: { p_user_id: profile.id, p_suspended: false } }
+                    : { label: "利用停止", confirm: "このユーザーを利用停止にしますか？（あとで解除できます）", rpc: "admin_set_suspended", args: { p_user_id: profile.id, p_suspended: true }, danger: true },
+                ]}
+              />
             )}
             {!isMe && (
               <div className="mt-3 flex flex-wrap items-center gap-3">

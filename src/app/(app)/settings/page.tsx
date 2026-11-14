@@ -22,6 +22,9 @@ export default async function SettingsPage() {
           <Link href="/lobby?tour=1" className="ml-2 underline">
             使い方をもう一度見る
           </Link>
+          <Link href="/feedback" className="ml-2 underline">
+            ご意見・不具合を送る
+          </Link>
         </p>
       </div>
 

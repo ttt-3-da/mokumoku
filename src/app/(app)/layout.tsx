@@ -15,11 +15,11 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       <header className="sticky top-0 z-20 border-b border-line bg-cream/90 backdrop-blur">
         {/* スマホ（縦持ち）では ☰ から左にメニューを出す */}
         <div className="mx-auto flex max-w-5xl items-center gap-x-3 px-4 py-2 sm:gap-x-4 sm:py-3">
-          <MobileMenu username={profile.username} />
+          <MobileMenu username={profile.username} isAdmin={Boolean(profile.is_admin)} />
           <Link href="/lobby" className="text-lg font-bold tracking-wide">
             Mokumoku
           </Link>
-          <NavLinks username={profile.username} />
+          <NavLinks username={profile.username} isAdmin={Boolean(profile.is_admin)} />
           <Link
             href="/shop"
             data-tour="coins"

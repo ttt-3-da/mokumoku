@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { heatLevel, type Avatar } from "@/lib/avatar";
 import { EmoteGlyph } from "@/components/emote-marks";
+import { OfficialBadge } from "@/components/official-badge";
 import { getEmote, type EmoteId } from "@/lib/emotes";
 import { STATUS_LABEL } from "@/lib/presence";
 import { formatClock } from "@/lib/pomodoro";
@@ -24,6 +25,8 @@ export type SeatMember = {
   stopwatchRunning: boolean;
   plantLevel: 1 | 2 | 3;
   role: "owner" | "moderator" | null;
+  /** 公式アカウント（DB の profiles.is_admin から。Presence の値は信じない） */
+  official?: boolean;
   leaving?: boolean;
 };
 
@@ -134,6 +137,7 @@ function Seat({
         {member.role === "owner" && <span aria-label="オーナー">👑</span>}
         {member.role === "moderator" && <span aria-label="モデレーター">🛡️</span>}
         {member.displayName}
+        {member.official && <OfficialBadge className="ml-0.5" />}
         {isMe && <span className="ml-0.5 text-accent-strong">（あなた）</span>}
       </span>
       <span className="rounded-md bg-paper/70 px-1.5 text-[11px] text-ink-soft">{member.leaving ? "またね" : STATUS_LABEL[member.status]}</span>
