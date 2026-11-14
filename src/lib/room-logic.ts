@@ -1,4 +1,5 @@
-import { REACTION_EMOJIS, type ReactionEmoji, type TimerMode } from "@/lib/types";
+import type { TimerMode } from "@/lib/types";
+import { isStampId, type StampId } from "@/lib/stamps";
 import type { TimerState } from "@/lib/pomodoro";
 
 // ---------------------------------------------------------------- スタンプ
@@ -6,7 +7,7 @@ import type { TimerState } from "@/lib/pomodoro";
 /** スタンプはクライアント側で2秒に1回まで */
 export const STAMP_INTERVAL_MS = 2000;
 
-export type StampEvent = { id: string; from: string; to: string; emoji: ReactionEmoji };
+export type StampEvent = { id: string; from: string; to: string; stamp: StampId };
 
 /**
  * スタンプを送れるか。
@@ -40,11 +41,11 @@ export function parseStampEvent(raw: unknown): StampEvent | null {
     typeof v.from !== "string" ||
     typeof v.to !== "string" ||
     v.from === v.to ||
-    !REACTION_EMOJIS.includes(v.emoji as ReactionEmoji)
+    !isStampId(v.stamp)
   ) {
     return null;
   }
-  return { id: v.id, from: v.from, to: v.to, emoji: v.emoji as ReactionEmoji };
+  return { id: v.id, from: v.from, to: v.to, stamp: v.stamp };
 }
 
 // ---------------------------------------------------------------- 席

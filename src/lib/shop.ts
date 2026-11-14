@@ -32,3 +32,11 @@ export function sortShopItems<T extends SortableItem>(items: readonly T[], owned
 export function coinsShort(balance: number, price: number): number {
   return Math.max(0, price - balance);
 }
+
+/** ショップの種類のタブ */
+export const SHOP_KINDS = ["color", "eyes", "mouth", "cheeks", "head", "neck", "desk", "stamp", "emote"] as const;
+export type ShopKind = (typeof SHOP_KINDS)[number];
+
+export function parseShopKind(v: unknown): ShopKind {
+  return typeof v === "string" && (SHOP_KINDS as readonly string[]).includes(v) ? (v as ShopKind) : "color";
+}

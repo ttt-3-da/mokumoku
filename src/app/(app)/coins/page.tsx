@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ButtonLink, Card } from "@/components/ui";
 import { parseShopItem } from "@/lib/avatar";
+import { getEmote } from "@/lib/emotes";
+import { getStamp } from "@/lib/stamps";
 import { BADGES, isBadgeId } from "@/lib/badges";
 import { createClient, getWallet } from "@/lib/supabase/server";
 
@@ -22,8 +24,15 @@ function describe(r: Row): string {
     case "streak":
       return `連続${r.detail?.split(":")[1] ?? ""}日ボーナス`;
     case "purchase": {
-      const name = parseShopItem(r.detail ?? "")?.label ?? (r.detail ?? "");
-      return `「${name}」を買った`;
+      const detail = r.detail ?? "";
+      const [kind, id] = detail.split(":");
+      const name =
+        kind === "stamp"
+          ? `スタンプ「${getStamp(id)?.label ?? id}」`
+          : kind === "emote"
+            ? `エモート「${getEmote(id)?.label ?? id}」`
+            : `「${parseShopItem(detail)?.label ?? detail}」`;
+      return `${name}を買った`;
     }
     case "goal":
       return "週の目標を達成";

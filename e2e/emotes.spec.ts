@@ -27,7 +27,7 @@ test("エモートをすると、同じ部屋のほかの人の画面でもも�
   await b.getByRole("button", { name: "よろしく" }).click();
 
   // A の画面：B の席に吹き出しが出て、もちが手を振る
-  await expect(a.getByRole("status").filter({ hasText: "👋 よろしく" })).toBeVisible({ timeout: 10_000 });
+  await expect(a.getByRole("status").filter({ hasText: "よろしく" })).toBeVisible({ timeout: 10_000 });
   await expect(a.locator(".mochi-emote-wave")).toHaveCount(1);
   // 送った本人の画面でも動く。3秒以内の連打はできない
   await expect(b.locator(".mochi-emote-wave")).toHaveCount(1);

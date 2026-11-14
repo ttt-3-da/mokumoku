@@ -31,14 +31,20 @@ import { parseTheme, ROOM_THEMES, type RoomTheme } from "@/lib/room-theme";
 import { playSound, unlockAudio, useMuted } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import {
+  canUseEmote,
   claimEmoteSlot,
+  EMOTES,
   EMOTE_DURATION_MS,
   EMOTE_INTERVAL_MS,
   emoteGroups,
   type EmoteEvent,
   type EmoteId,
 } from "@/lib/emotes";
-import { REACTION_EMOJIS, type PresenceMeta, type ReactionEmoji, type Room, type StudySession } from "@/lib/types";
+import { type PresenceMeta, type Room, type StudySession } from "@/lib/types";
+import Link from "next/link";
+import { EmoteGlyph } from "@/components/emote-marks";
+import { StampArt } from "@/components/stamp-art";
+import { usableStamps, type StampId } from "@/lib/stamps";
 import { TASK_MAX, validateTask } from "@/lib/validation";
 import { IdleDialog, useIdleCheck } from "./idle-check";
 import { MemberActions, type RoomRole } from "./member-actions";
@@ -52,16 +58,20 @@ type Props = {
   room: Room;
   session: StudySession;
   me: { id: string; displayName: string; avatar: Avatar; plantLevel: 1 | 2 | 3 };
+  /** 買った品物（スタンプ・エモートを使えるか） */
+  owned: string[];
   isStaff: boolean;
 };
 
-type Flight = { id: string; emoji: ReactionEmoji; x: number; y: number; dx: number; dy: number; peak: number };
+type Flight = { id: string; stamp: StampId; from: string; x: number; y: number; dx: number; dy: number; peak: number };
 
 const FLIGHT_MS = 900;
 const HOP_MS = 1300;
 const LEAVE_MS = 1500;
 
-export function RoomLive({ room, session, me, isStaff }: Props) {
+export function RoomLive({ room, session, me, isStaff, owned }: Props) {
+  const ownedSet = useMemo(() => new Set(owned), [owned]);
+  const myStamps = useMemo(() => usableStamps(owned), [owned]);
   const router = useRouter();
   const hidden = useDocumentHidden();
   const offset = useServerOffset();
@@ -162,7 +172,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
     const dx = t.left + t.width / 2 - b.left - x;
     const dy = t.top + t.height / 3 - b.top - y;
     const peak = Math.min(0, dy) - 70;
-    setFlights((list) => [...list, { id: ev.id, emoji: ev.emoji, x, y, dx, dy, peak }]);
+    setFlights((list) => [...list, { id: ev.id, stamp: ev.stamp, from: ev.from, x, y, dx, dy, peak }]);
     setTimeout(() => {
       setFlights((list) => list.filter((fl) => fl.id !== ev.id));
       setHops((h) => ({ ...h, [ev.to]: Date.now() }));
@@ -428,12 +438,12 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
   const allowed = stampsAllowed(room.timer_mode, timer);
   const targetPresent = target !== null && members.some((m) => m.userId === target);
 
-  async function stamp(emoji: ReactionEmoji) {
+  async function stamp(id: StampId) {
     if (!targetPresent || !allowed) return;
     if (!claimStampSlot(lastSentRef)) return;
     setCooling(true);
     setTimeout(() => setCooling(false), STAMP_INTERVAL_MS);
-    const ev: StampEvent = { id: crypto.randomUUID(), from: me.id, to: target!, emoji };
+    const ev: StampEvent = { id: crypto.randomUUID(), from: me.id, to: target!, stamp: id };
     playStamp(ev);
     await sendStamp(ev);
   }
@@ -556,13 +566,13 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
             <div
               key={f.id}
               className="stamp-flight-x absolute"
-              style={{ left: f.x - 14, top: f.y - 14, "--stamp-dx": `${f.dx}px` } as CSSProperties}
+              style={{ left: f.x - 20, top: f.y - 20, "--stamp-dx": `${f.dx}px` } as CSSProperties}
             >
               <div
-                className="stamp-flight-y text-2xl"
+                className="stamp-flight-y"
                 style={{ "--stamp-dy": `${f.dy}px`, "--stamp-peak": `${f.peak}px` } as CSSProperties}
               >
-                {f.emoji}
+                <StampArt id={f.stamp} avatar={(members.find((m) => m.userId === f.from) ?? departed.find((m) => m.userId === f.from))?.avatar} size={40} />
               </div>
             </div>
           ))}
@@ -599,7 +609,7 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
           </div>
           {emoteOpen && (
             <div id="emote-palette" className="flex flex-col gap-2 rounded-2xl bg-cream p-2">
-              {emoteGroups().map((g) => (
+              {emoteGroups(EMOTES.filter((e) => canUseEmote(e.id, ownedSet))).map((g) => (
                 <div key={g.group} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={g.group}>
                   <span className="w-14 shrink-0 text-xs text-ink-soft">{g.group}</span>
                   {g.items.map((e) => (
@@ -610,27 +620,40 @@ export function RoomLive({ room, session, me, isStaff }: Props) {
                       disabled={emoteCooling}
                       className="rounded-full bg-paper px-3 py-1 text-sm shadow-sm transition hover:scale-105 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
                     >
-                      <span aria-hidden>{e.icon}</span> {e.label}
+                      <EmoteGlyph emote={e.id} size={14} className="mr-1 inline-block align-[-2px]" />
+                      {e.label}
                     </button>
                   ))}
                 </div>
               ))}
+              <Link href="/shop?kind=emote" className="self-end text-xs text-ink-soft underline">
+                ショップでエモートをふやす
+              </Link>
             </div>
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {REACTION_EMOJIS.map((e) => (
+          {myStamps.map((s) => (
             <button
-              key={e}
+              key={s.id}
               type="button"
-              onClick={() => stamp(e)}
+              onClick={() => stamp(s.id)}
               disabled={!allowed || !targetPresent || cooling}
-              className="h-11 w-11 rounded-full bg-cream text-xl transition hover:scale-110 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
-              aria-label={`${e} スタンプを送る`}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-cream transition hover:scale-110 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
+              aria-label={`${s.label} スタンプを送る`}
+              title={s.label}
             >
-              {e}
+              <StampArt id={s.id} avatar={me.avatar} size={34} />
             </button>
           ))}
+          <Link
+            href="/shop?kind=stamp"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-line text-lg text-ink-soft hover:bg-cream"
+            aria-label="ショップでスタンプをふやす"
+            title="ショップでスタンプをふやす"
+          >
+            ＋
+          </Link>
           <span className="text-xs text-ink-soft">
             {!allowed
               ? "スタンプは休憩中に送れます"

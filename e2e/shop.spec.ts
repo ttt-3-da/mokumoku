@@ -63,3 +63,27 @@ test("スマホの幅でも、ページが横にはみ出さない", async ({ pa
     expect(overflow, `${path} が横にはみ出している`).toBeLessThanOrEqual(0);
   }
 });
+
+test("スタンプを買うと部屋で送れるようになり、買っていないエモートは出ない", async ({ page }) => {
+  page.on("dialog", (d) => void d.accept());
+  await signUp(page, undefined, "スタンプもち");
+  await page.goto("/shop?kind=stamp");
+  await page.getByRole("button", { name: /いいね/ }).click();
+  await page.getByRole("button", { name: "🪙10 で買う" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "「いいね」を買いました！部屋で使えます" })).toBeVisible();
+
+  await page.goto("/rooms/new");
+  await page.getByLabel("部屋名").fill(`スタンプ部屋 ${Date.now()}`);
+  await page.getByRole("button", { name: "部屋をつくる" }).click();
+  await page.getByLabel("今からやること").fill("英単語");
+  await page.getByRole("button", { name: "入室する" }).click();
+  await expect(page.getByText("● 接続中")).toBeVisible({ timeout: 15_000 });
+
+  await expect(page.getByRole("button", { name: "ぱちぱち スタンプを送る" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "いいね スタンプを送る" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "ファイト スタンプを送る" })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "🎭 エモート" }).click();
+  await expect(page.getByRole("button", { name: "よろしく" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "うんうん" })).toHaveCount(0);
+});

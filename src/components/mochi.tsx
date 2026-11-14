@@ -1,5 +1,6 @@
 import { useId, type CSSProperties } from "react";
 import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type ColorDef } from "@/lib/avatar";
+import { EmoteMark } from "@/components/emote-marks";
 import type { EmoteId } from "@/lib/emotes";
 import { EXTRA_DESKS, EXTRA_HEADS, ExtraDesk, ExtraHead, NeckItem } from "./mochi-accessories";
 import { EXTRA_CHEEKS, EXTRA_EYES, EXTRA_MOUTHS, ExtraCheeks, ExtraEyes, ExtraMouth } from "./mochi-parts";
@@ -92,19 +93,21 @@ export function Mochi({
   } as CSSProperties;
 
   // 連続集中2時間超は、どのほっぺでも赤くする
-  const cheek = hot ? "#ff6b6b" : avatar.cheeks in CHEEK_COLOR ? CHEEK_COLOR[avatar.cheeks as keyof typeof CHEEK_COLOR] : null;
+  const cheek = hot || emote === "blush" ? "#ff6b6b" : avatar.cheeks in CHEEK_COLOR ? CHEEK_COLOR[avatar.cheeks as keyof typeof CHEEK_COLOR] : null;
   const emoteEyes =
-    emote === "bow" || emote === "doze" || emote === "nod"
+    emote === "bow" || emote === "doze" || emote === "nod" || emote === "relief"
       ? "closed"
-      : emote === "idea" || emote === "fire"
+      : emote === "idea" || emote === "fire" || emote === "shine"
         ? "sparkle"
-        : emote === "joy" || emote === "stretch" || emote === "wave"
+        : emote === "joy" || emote === "stretch" || emote === "wave" || emote === "blush" || emote === "groove" || emote === "cheer" || emote === "spin"
           ? "smile"
-          : null;
+          : emote === "shock" || emote === "jiggle" || emote === "hmm" || emote === "hungry" || emote === "tall"
+            ? "dot"
+            : null;
   const eyes = emoteEyes ?? (away ? "closed" : hot ? "sparkle" : avatar.eyes);
   // エモートや完了の演出中は、ペン・湯のみ・「…！」をしまう
   const busy = celebrate || emote !== null;
-  const handsUp = celebrate || emote === "joy" || emote === "stretch";
+  const handsUp = celebrate || emote === "joy" || emote === "stretch" || emote === "groove";
 
   const classes = [
     "mochi relative inline-block shrink-0",
@@ -163,7 +166,7 @@ export function Mochi({
 
               {/* ほっぺ */}
               {cheek ? (
-                <g fill={cheek} opacity={hot ? 0.8 : 0.65}>
+                <g fill={cheek} opacity={hot || emote === "blush" ? 0.8 : 0.65}>
                   <ellipse cx="29" cy="68" rx="5.5" ry="3.4" />
                   <ellipse cx="71" cy="68" rx="5.5" ry="3.4" />
                 </g>
@@ -212,7 +215,7 @@ export function Mochi({
                   <circle cx="87" cy="44" r="4.8" />
                 </g>
               )}
-              {(leaving || emote === "wave") && (
+              {(leaving || emote === "wave" || emote === "cheer") && (
                 <g className="mochi-wave">
                   <circle cx="86" cy="52" r="4.8" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
@@ -431,51 +434,6 @@ export function DeskItem({ kind, size = 28, level = 1 }: { kind: Avatar["desk"];
   );
 }
 
-/** エモートの記号（色だけに頼らず、何をしたか分かるように） */
-function EmoteMark({ emote }: { emote: EmoteId }) {
-  switch (emote) {
-    case "idea":
-      return (
-        <text className="mochi-emote-icon" x="50" y="22" fontSize="20" textAnchor="middle">
-          💡
-        </text>
-      );
-    case "sweat":
-      return (
-        <text className="mochi-emote-icon mochi-emote-drip" x="84" y="46" fontSize="14" textAnchor="middle">
-          💦
-        </text>
-      );
-    case "fire":
-      return (
-        <text className="mochi-emote-icon mochi-emote-flicker" x="50" y="26" fontSize="20" textAnchor="middle">
-          🔥
-        </text>
-      );
-    case "joy":
-      return (
-        <g className="mochi-emote-icon" fill={INK} fontWeight="bold">
-          <text x="14" y="28" fontSize="13">♪</text>
-          <text x="80" y="22" fontSize="15">♫</text>
-        </g>
-      );
-    case "doze":
-      return (
-        <g fill={INK} fontWeight="bold">
-          <text className="mochi-zzz" x="74" y="34" fontSize="12">z</text>
-          <text className="mochi-zzz mochi-zzz-2" x="82" y="24" fontSize="15">Z</text>
-        </g>
-      );
-    case "bow":
-      return (
-        <text className="mochi-emote-icon" x="82" y="30" fontSize="13" textAnchor="middle">
-          ✨
-        </text>
-      );
-    default:
-      return null;
-  }
-}
 /** 体の塗り分け。bands は上から等分の色の帯、gradient はなめらかなグラデーション */
 function BodyPaint({ id, paint }: { id: string; paint: NonNullable<ColorDef["paint"]> }) {
   const n = paint.stops.length;

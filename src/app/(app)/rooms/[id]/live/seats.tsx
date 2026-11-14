@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { heatLevel, type Avatar } from "@/lib/avatar";
+import { EmoteGlyph } from "@/components/emote-marks";
 import { getEmote, type EmoteId } from "@/lib/emotes";
 import { STATUS_LABEL } from "@/lib/presence";
 import { formatClock } from "@/lib/pomodoro";
@@ -96,7 +97,8 @@ function Seat({
       {emoteInfo ? (
         // エモート中は「今やること」の代わりに吹き出しを出す
         <div key={emote!.key} className="animate-mochi-drop max-w-full truncate rounded-xl bg-sakura/30 px-2 py-1 text-[11px] font-bold leading-tight shadow-sm" role="status">
-          {emoteInfo.icon} {emoteInfo.label}
+          <EmoteGlyph emote={emoteInfo.id} size={12} className="mr-0.5 inline-block align-[-1px]" />
+          {emoteInfo.label}
         </div>
       ) : (
         <div

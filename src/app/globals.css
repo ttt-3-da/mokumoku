@@ -270,6 +270,56 @@ body {
 .mochi-emote-sweat .mochi-jump { animation: emote-shake 0.12s linear 10; }
 .mochi-emote-fire .mochi-jump { animation: emote-pulse 0.4s ease-in-out 6; }
 
+@keyframes emote-jiggle {
+  0%, 100% { transform: scale(1, 1); }
+  20% { transform: scale(1.1, 0.9); }
+  40% { transform: scale(0.94, 1.06); }
+  60% { transform: scale(1.05, 0.95); }
+  80% { transform: scale(0.98, 1.02); }
+}
+@keyframes emote-groove {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  25% { transform: rotate(-8deg) translateY(-3px); }
+  50% { transform: rotate(0deg) translateY(0); }
+  75% { transform: rotate(8deg) translateY(-3px); }
+}
+@keyframes emote-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  20%, 80% { transform: rotate(-10deg); }
+}
+@keyframes emote-shock {
+  0% { transform: translateY(0) scale(1); }
+  15% { transform: translateY(-6px) scale(0.95, 1.08); }
+  30%, 85% { transform: translateY(2px) scale(1.04, 0.94); }
+  100% { transform: translateY(0) scale(1); }
+}
+@keyframes emote-relief {
+  0%, 100% { transform: scale(1, 1); }
+  20% { transform: scale(0.96, 1.06); }
+  55% { transform: scale(1.08, 0.88); }
+}
+@keyframes emote-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes emote-tall {
+  0%, 100% { transform: scale(1, 1); }
+  35%, 60% { transform: scale(0.82, 1.5); }
+  75% { transform: scale(1.08, 0.9); }
+}
+.mochi-emote-cheer .mochi-jump { animation: mochi-jump 0.7s ease-in-out 3; }
+.mochi-emote-cheer .mochi-wave { animation-iteration-count: 6; }
+.mochi-emote-jiggle .mochi-jump { animation: emote-jiggle 0.6s ease-in-out 3; }
+.mochi-emote-blush .mochi-jump { animation: emote-sway 1.2s ease-in-out 2; }
+.mochi-emote-shock .mochi-jump { animation: emote-shock 2.2s ease-out 1; }
+.mochi-emote-relief .mochi-jump { animation: emote-relief 2.2s ease-in-out 1; }
+.mochi-emote-hungry .mochi-jump { animation: emote-sway 1.3s ease-in-out 2; }
+.mochi-emote-groove .mochi-jump { animation: emote-groove 0.8s ease-in-out 3; }
+.mochi-emote-spin .mochi-jump { animation: emote-spin 0.9s ease-in-out 2; transform-origin: 50px 62px !important; }
+.mochi-emote-tall .mochi-jump { animation: emote-tall 1.6s ease-in-out 1; }
+.mochi-emote-hmm .mochi-jump { animation: emote-tilt 2.4s ease-in-out 1; }
+.mochi-emote-shine .mochi-jump { animation: emote-pulse 0.5s ease-in-out 4; }
+
 .mochi-emote-icon { animation: emote-icon 2.6s ease-out forwards; }
 .mochi-emote-drip { animation: emote-drip 1.3s ease-in 2; }
 .mochi-emote-flicker { animation: emote-icon 2.6s ease-out forwards, emote-flicker 0.3s ease-in-out infinite; }

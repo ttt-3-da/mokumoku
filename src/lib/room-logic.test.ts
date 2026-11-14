@@ -33,9 +33,10 @@ describe("stampCooldown", () => {
 
 describe("parseStampEvent", () => {
   it("正しい形だけ受け付ける", () => {
-    expect(parseStampEvent({ id: "1", from: "a", to: "b", emoji: "👏" })).toEqual({ id: "1", from: "a", to: "b", emoji: "👏" });
-    expect(parseStampEvent({ id: "1", from: "a", to: "b", emoji: "💩" })).toBeNull();
-    expect(parseStampEvent({ id: "1", from: "a", to: "a", emoji: "👏" })).toBeNull();
+    expect(parseStampEvent({ id: "1", from: "a", to: "b", stamp: "clap" })).toEqual({ id: "1", from: "a", to: "b", stamp: "clap" });
+    expect(parseStampEvent({ id: "1", from: "a", to: "b", stamp: "poop" })).toBeNull();
+    expect(parseStampEvent({ id: "1", from: "a", to: "b", emoji: "👏" })).toBeNull();
+    expect(parseStampEvent({ id: "1", from: "a", to: "a", stamp: "clap" })).toBeNull();
     expect(parseStampEvent(null)).toBeNull();
   });
 });

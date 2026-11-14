@@ -46,13 +46,12 @@ test("限定部屋に招待URLから入り、スタンプを送ると相手の�
 
   // B → A にスタンプ
   await b.getByRole("button", { name: /招待するもち.*スタンプを送る相手に選ぶ/ }).click();
-  await b.getByRole("button", { name: "👏 スタンプを送る" }).click();
+  await b.getByRole("button", { name: "ぱちぱち スタンプを送る" }).click();
+  // 2秒以内の連打はできない
+  await expect(b.getByRole("button", { name: "ぱちぱち スタンプを送る" })).toBeDisabled();
 
   // A の画面で、A のもちにハートが出る（受け取った側がぴょんと跳ねる）
   await expect(a.locator(".mochi-hop .mochi-heart")).toHaveCount(1, { timeout: 10_000 });
-
-  // 2秒以内の連打はできない
-  await expect(b.getByRole("button", { name: "👏 スタンプを送る" })).toBeDisabled();
 });
 
 test("自由モードのストップウォッチは、同じ部屋のほかの人にも見える", async ({ browser }) => {
