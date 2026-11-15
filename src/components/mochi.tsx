@@ -240,9 +240,9 @@ export function Mochi({
           <g className="mochi-pose">
             <g className="mochi-breathe">
               {/* 2段・3段もちは、同じもちを積んで、全体が枠に入るように小さくする（どのもちにも顔がある） */}
-              <g transform={stack > 1 ? `translate(50 90) scale(${88 / (56 + (stack - 1) * FORM_STACK_STEP)}) translate(-50 -90)` : undefined}>
+              <g style={STACK_BOX} transform={stack > 1 ? `translate(50 90) scale(${88 / (56 + (stack - 1) * FORM_STACK_STEP)}) translate(-50 -90)` : undefined}>
                 {Array.from({ length: stack }, (_, i) => (
-                  <g key={i} transform={i > 0 ? `translate(0 ${-i * FORM_STACK_STEP})` : undefined}>
+                  <g key={i} style={STACK_BOX} transform={i > 0 ? `translate(0 ${-i * FORM_STACK_STEP})` : undefined}>
                     {figure(i === stack - 1)}
                   </g>
                 ))}
@@ -465,6 +465,9 @@ export function DeskItem({ kind, size = 28, level = 1 }: { kind: Avatar["desk"];
  * もちの体の形。顔（目は y=60、口は y=68 あたり）が体の上に来るように描く。
  * 段のある形は下の段から順に重ねる
  */
+/** 積むための移動・縮小は viewBox を基準にする（.mochi g の fill-box だと右にずれる） */
+const STACK_BOX: CSSProperties = { transformBox: "view-box", transformOrigin: "0 0" };
+
 function BodyShape({ form, ...paint }: { form: AvatarForm } & SVGProps<SVGEllipseElement>) {
   switch (form) {
     case "square":

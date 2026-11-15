@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
-import type { Avatar } from "@/lib/avatar";
+import { COLORS, type Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -97,6 +97,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
   // つまんでいるあいだ、もちが行きたい場所（指の位置）。体はあとからついてくる
   const pull = useRef({ tx: 0, ty: 0 });
+  // つまんだ場所（もちの箱の中の位置）。ここから指まで、もちの一部がびよーんと出っ張る
+  const pinch = useRef({ ax: 0, ay: 0, active: false });
+  const lumpRef = useRef<SVGPathElement>(null);
   // anchor：つまんで引っぱっているとき。うしろ側を残して、指の向きにだけ伸びる
   const stretch = useRef({ angle: 0, k: 0, anchor: false });
   const [squish, setSquish] = useState(0);
@@ -115,6 +118,25 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     // 動く向きに伸びて、そのぶん細くなる（つままれてびよーんと伸びる）
     const thin = anchor ? 1 / Math.sqrt(1 + k * 1.4) : 1 - k * 0.45;
     el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}rad) scale(${1 + k}, ${thin}) rotate(${-angle}rad)`;
+
+    // つまんだところだけが指に向かって出っ張る（根元は体の後ろに隠れる）
+    const lump = lumpRef.current;
+    if (!lump) return;
+    const pc = pinch.current;
+    if (!pc.active) {
+      lump.setAttribute("d", "");
+      return;
+    }
+    const ax = x + pc.ax;
+    const ay = y + pc.ay;
+    const tx = pull.current.tx + pc.ax;
+    const ty = pull.current.ty + pc.ay;
+    const len = Math.hypot(tx - ax, ty - ay);
+    if (len < 2) {
+      lump.setAttribute("d", "");
+      return;
+    }
+    lump.setAttribute("d", lumpPath(ax, ay, tx, ty, s));
   }, []);
 
   const roomSize = useCallback(() => {
@@ -187,14 +209,15 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const s = sizeRef.current;
       const b = body.current;
       const t = pull.current;
-      const f = 1 - Math.exp(-dt * 5);
-      b.x += (t.tx - b.x) * f;
-      b.y += (t.ty - b.y) * f;
+      const f = 1 - Math.exp(-dt * 2.5);
+      const { w: rw, h: rh } = roomSize();
+      b.x = Math.min(rw - s, Math.max(0, b.x + (t.tx - b.x) * f));
+      b.y = Math.min(rh - s, Math.max(0, b.y + (t.ty - b.y) * f));
       let dx = t.tx - b.x;
       let dy = t.ty - b.y;
       let d = Math.hypot(dx, dy);
       // 伸びすぎたら体ごと引っぱられる
-      const max = s * 1.3;
+      const max = s * 1.1;
       if (d > max) {
         b.x = t.tx - (dx / d) * max;
         b.y = t.ty - (dy / d) * max;
@@ -202,12 +225,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         dy = t.ty - b.y;
         d = max;
       }
-      stretch.current = d > 0.5 ? { angle: Math.atan2(dy, dx), k: d / s, anchor: true } : { angle: 0, k: 0, anchor: false };
+      // 体はほんの少しだけ指のほうへ伸びる（大きく伸びるのは、つまんだところ）
+      stretch.current = d > 0.5 ? { angle: Math.atan2(dy, dx), k: Math.min(0.18, (d / s) * 0.18), anchor: true } : { angle: 0, k: 0, anchor: false };
       paint();
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
-  }, [paint]);
+  }, [paint, roomSize]);
 
   function onMochiDown(e: ReactPointerEvent) {
     if (editing || !roomRef.current) return;
@@ -220,6 +244,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     mode.current = "drag";
     grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0 };
     pull.current = { tx: body.current.x, ty: body.current.y };
+    pinch.current = { ...insideBody(px - body.current.x, py - body.current.y, sizeRef.current, avatar.form ?? "round"), active: true };
     body.current.vx = 0;
     body.current.vy = 0;
     dragLoop();
@@ -240,14 +265,17 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     g.lastY = py;
     g.lastT = now;
     if (Math.hypot(px - g.startX, py - g.startY) > 6) g.moved = true;
+    // 出っ張りの先が指の位置になるように（つまんだ場所の分だけずらす）
+    const pc = pinch.current;
     pull.current = {
-      tx: Math.min(r.width - sizeRef.current, Math.max(0, px - g.ox)),
-      ty: Math.min(r.height - sizeRef.current, Math.max(0, py - g.oy)),
+      tx: Math.min(r.width - pc.ax, Math.max(-pc.ax, px - pc.ax)),
+      ty: Math.min(r.height - pc.ay, Math.max(-pc.ay, py - pc.ay)),
     };
   }
 
   function onMochiUp() {
     if (mode.current !== "drag") return;
+    pinch.current.active = false;
     const g = grab.current;
     if (!g.moved) {
       // タップ：むにっとつぶれる
@@ -355,6 +383,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           </div>
         ))}
 
+        <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden>
+          <path ref={lumpRef} d="" fill={COLORS[avatar.color].fill} stroke={COLORS[avatar.color].edge} strokeWidth={Math.max(2, SIZE * 0.03)} strokeLinejoin="round" />
+        </svg>
         <div
           ref={mochiRef}
           className={`absolute left-0 top-0 ${editing ? "pointer-events-none opacity-60" : "cursor-grab active:cursor-grabbing"}`}
@@ -429,4 +460,41 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       )}
     </div>
   );
+}
+
+/** つまんだ場所を、もちの体の内側（顔のまわり）におさめる。出っ張りの根元が体に隠れるように */
+function insideBody(ox: number, oy: number, s: number, form: string) {
+  const [cx, cy, rx, ry] =
+    form === "king" ? [0.5, 0.41, 0.58, 0.48] : form === "double" || form === "triple" ? [0.5, 0.5, 0.2, 0.42] : [0.5, 0.62, 0.34, 0.28];
+  let vx = ox - cx * s;
+  let vy = oy - cy * s;
+  const e = Math.hypot(vx / (rx * s), vy / (ry * s));
+  if (e > 0.6) {
+    vx *= 0.6 / e;
+    vy *= 0.6 / e;
+  }
+  return { ax: cx * s + vx, ay: cy * s + vy };
+}
+
+/** 根元（a）から指（t）まで、まんなかが少しくびれて先が丸い、つままれたもちの形 */
+function lumpPath(ax: number, ay: number, tx: number, ty: number, s: number) {
+  const len = Math.hypot(tx - ax, ty - ay);
+  const ux = (tx - ax) / len;
+  const uy = (ty - ay) / len;
+  const nx = -uy;
+  const ny = ux;
+  const base = s * 0.2; // 根元の太さの半分
+  const tip = Math.max(s * 0.06, s * 0.12 - len * 0.03); // 伸びるほど先が細くなる
+  const neck = Math.max(tip * 0.75, base * (0.75 - len / (s * 3))); // まんなかのくびれ
+  const mx = (ax + tx) / 2;
+  const my = (ay + ty) / 2;
+  const p = (x: number, y: number) => `${x.toFixed(1)} ${y.toFixed(1)}`;
+  const k = tip * 1.33;
+  return [
+    `M ${p(ax + nx * base, ay + ny * base)}`,
+    `Q ${p(mx + nx * neck, my + ny * neck)} ${p(tx + nx * tip, ty + ny * tip)}`,
+    `C ${p(tx + nx * tip + ux * k, ty + ny * tip + uy * k)} ${p(tx - nx * tip + ux * k, ty - ny * tip + uy * k)} ${p(tx - nx * tip, ty - ny * tip)}`,
+    `Q ${p(mx - nx * neck, my - ny * neck)} ${p(ax - nx * base, ay - ny * base)}`,
+    "Z",
+  ].join(" ");
 }
