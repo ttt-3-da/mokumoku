@@ -4,8 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
-import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
-import { bodyOutline, newJelly, outlineAngle, stepJelly, type Bulge, type Jelly } from "@/lib/mochi-body";
+import type { Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -96,86 +95,15 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const body = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
   const mode = useRef<"rest" | "drag" | "fly">("rest");
   const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
-  // つまんでいるあいだ、もちが行きたい場所（指の位置）。体はあとからついてくる
-  const pull = useRef({ tx: 0, ty: 0 });
-  // つまんだ場所（もちの箱の中の位置）。そこだけ体が指のほうへ曲がって出っ張る
-  const pinch = useRef({ ax: 0, ay: 0, active: false });
-  const form = avatar.form ?? "round";
-  // 体の輪郭をスライムのように動かす（積んだもちは1段ずつ）
-  const jellies = useRef<Jelly[]>([]);
-  const jellyRaf = useRef<number | null>(null);
   const [squish, setSquish] = useState(0);
-  // anchor：つまんで引っぱっているとき。うしろ側を残して、指の向きにだけ伸びる
-  const stretch = useRef({ angle: 0, k: 0, anchor: false });
   const raf = useRef<number | null>(null);
 
+  // もちの形は変えずに、位置だけ動かす
   const paint = useCallback(() => {
     const el = mochiRef.current;
     if (!el) return;
-    const { x, y } = body.current;
-    const { angle, k, anchor } = stretch.current;
-    const s = sizeRef.current;
-    // 引っぱっているときは、伸びたぶんだけ指のほうへずらす（うしろ側はその場に残る）
-    const shift = anchor ? (k * s) / 2 : 0;
-    const sx = x + Math.cos(angle) * shift;
-    const sy = y + Math.sin(angle) * shift;
-    // 動く向きに伸びて、そのぶん細くなる（つままれてびよーんと伸びる）
-    const thin = anchor ? 1 / Math.sqrt(1 + k * 1.4) : 1 - k * 0.45;
-    el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}rad) scale(${1 + k}, ${thin}) rotate(${-angle}rad)`;
-
+    el.style.transform = `translate(${body.current.x}px, ${body.current.y}px)`;
   }, []);
-
-  /** スライムの動きを回す。揺れがおさまって、つまんでいなければ止まる */
-  const runJelly = useCallback(
-    () => {
-      const el = mochiRef.current;
-      if (!el) return;
-      const square = form === "square";
-      const n = (FORM_STACK[form] ?? 0) + 1;
-      while (jellies.current.length < n) jellies.current.push(newJelly());
-      if (jellyRaf.current) return;
-      let last = performance.now();
-      let quiet = 0;
-      const tick = (now: number) => {
-        const node = mochiRef.current;
-        if (!node) {
-          jellyRaf.current = null;
-          return;
-        }
-        const dt = Math.min(0.033, Math.max(0.001, (now - last) / 1000));
-        last = now;
-        const s = sizeRef.current;
-        const pc = pinch.current;
-        const hit = pc.active ? toBody(pc.ax, pc.ay, pull.current.tx - body.current.x, pull.current.ty - body.current.y, s, form) : null;
-        let energy = 0;
-        jellies.current.slice(0, n).forEach((j, c) => {
-          energy += stepJelly(j, dt, hit && hit.copy === c ? hit.bulge : null);
-        });
-        node.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => {
-          const j = jellies.current[Number(path.dataset.mochiBody)];
-          if (j) path.setAttribute("d", bodyOutline(square, j));
-        });
-        quiet = energy < 0.08 && !pc.active && mode.current === "rest" ? quiet + dt : 0;
-        if (quiet > 0.4) {
-          // 止まったら元の形にもどしておく
-          jellies.current = [];
-          node.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => path.setAttribute("d", bodyOutline(square)));
-          jellyRaf.current = null;
-          return;
-        }
-        jellyRaf.current = requestAnimationFrame(tick);
-      };
-      jellyRaf.current = requestAnimationFrame(tick);
-    },
-    [form],
-  );
-
-  useEffect(
-    () => () => {
-      if (jellyRaf.current) cancelAnimationFrame(jellyRaf.current);
-    },
-    [],
-  );
 
   const roomSize = useCallback(() => {
     const r = roomRef.current?.getBoundingClientRect();
@@ -211,6 +139,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     };
   }, [paint, roomSize]);
 
+  // 投げたあと：壁や床で跳ね返りながら、床で止まる
   const fly = useCallback(() => {
     let last = performance.now();
     const tick = (now: number) => {
@@ -220,53 +149,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const s = sizeRef.current;
       const next = stepBounce(body.current, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
-      const speed = Math.hypot(next.vx, next.vy);
-      stretch.current = { angle: Math.atan2(next.vy, next.vx), k: Math.min(0.12, speed / 6000), anchor: false };
       paint();
       const resting = next.y >= h - s - 0.5 && Math.abs(next.vx) < 8 && next.vy === 0;
       if (mode.current === "fly" && !resting) {
         raf.current = requestAnimationFrame(tick);
       } else {
         mode.current = "rest";
-        stretch.current = { angle: 0, k: 0, anchor: false };
-        paint();
       }
-    };
-    raf.current = requestAnimationFrame(tick);
-  }, [paint, roomSize]);
-
-  // つまんでいるあいだ：体はゆっくり指を追いかけ、離れたぶんだけびよーんと伸びる
-  const dragLoop = useCallback(() => {
-    let last = performance.now();
-    const tick = (now: number) => {
-      if (mode.current !== "drag") return;
-      const dt = Math.min(0.032, (now - last) / 1000);
-      last = now;
-      const s = sizeRef.current;
-      const b = body.current;
-      const t = pull.current;
-      // 体はほとんどその場に残り、出っ張りが伸びきると体ごと引っぱられる
-      const f = 1 - Math.exp(-dt * 0.2);
-      const { w: rw, h: rh } = roomSize();
-      b.x = Math.min(rw - s, Math.max(0, b.x + (t.tx - b.x) * f));
-      b.y = Math.min(rh - s, Math.max(0, b.y + (t.ty - b.y) * f));
-      let dx = t.tx - b.x;
-      let dy = t.ty - b.y;
-      let d = Math.hypot(dx, dy);
-      // 伸びすぎたら体ごと引っぱられる
-      const max = s * 0.4;
-      if (d > max) {
-        b.x = t.tx - (dx / d) * max;
-        b.y = t.ty - (dy / d) * max;
-        dx = t.tx - b.x;
-        dy = t.ty - b.y;
-        d = max;
-      }
-      // 形はスライムの動きで出すので、体そのものは伸ばさない
-      void d;
-      stretch.current = { angle: 0, k: 0, anchor: false };
-      paint();
-      raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
   }, [paint, roomSize]);
@@ -281,14 +170,11 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const py = e.clientY - r.top;
     mode.current = "drag";
     grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0 };
-    pull.current = { tx: body.current.x, ty: body.current.y };
-    pinch.current = { ax: px - body.current.x, ay: py - body.current.y, active: true };
     body.current.vx = 0;
     body.current.vy = 0;
-    dragLoop();
-    runJelly();
   }
 
+  // ドラッグ：もちは指についてくる
   function onMochiMove(e: ReactPointerEvent) {
     if (mode.current !== "drag" || !roomRef.current) return;
     const r = roomRef.current.getBoundingClientRect();
@@ -304,35 +190,27 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     g.lastY = py;
     g.lastT = now;
     if (Math.hypot(px - g.startX, py - g.startY) > 6) g.moved = true;
-    // 出っ張りの先が指の位置になるように（つまんだ場所の分だけずらす）
-    const pc = pinch.current;
-    pull.current = {
-      tx: Math.min(r.width - pc.ax, Math.max(-pc.ax, px - pc.ax)),
-      ty: Math.min(r.height - pc.ay, Math.max(-pc.ay, py - pc.ay)),
-    };
+    const s = sizeRef.current;
+    body.current.x = Math.min(r.width - s, Math.max(0, px - g.ox));
+    body.current.y = Math.min(r.height - s, Math.max(0, py - g.oy));
+    paint();
   }
 
   function onMochiUp() {
     if (mode.current !== "drag") return;
-    pinch.current.active = false;
     const g = grab.current;
+    const b = body.current;
     if (!g.moved) {
       // タップ：むにっとつぶれる
-      body.current.vx = 0;
-      body.current.vy = 0;
-      stretch.current = { angle: 0, k: 0, anchor: false };
-      mode.current = "fly";
+      b.vx = 0;
+      b.vy = 0;
       setSquish((n) => n + 1);
-      fly();
-      return;
+    } else {
+      // 勢いよく投げると、そのまま飛んでいく。ゆっくり離すと、その場から落ちる
+      const keep = Math.hypot(g.vx, g.vy) < 400 ? 0.3 : 1;
+      b.vx = g.vx * keep;
+      b.vy = g.vy * keep;
     }
-    // 離すと、伸びていたぶん指のほうへぽよんと戻る。勢いよく投げていればそのまま飛んでいく
-    const b = body.current;
-    const t = pull.current;
-    const speed = Math.hypot(g.vx, g.vy);
-    const keep = speed < 400 ? 0.3 : 1;
-    b.vx = g.vx * keep + (t.tx - b.x) * 6;
-    b.vy = g.vy * keep + (t.ty - b.y) * 6;
     mode.current = "fly";
     fly();
   }
@@ -496,38 +374,4 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       )}
     </div>
   );
-}
-
-/**
- * もちの箱の中の位置（px）を、Mochi の viewBox の中の位置に直して、どこをどれだけ引っぱったかを出す。
- * キングもちは 1.7 倍、2段・3段もちは縮めて積んでいるので、そのぶん戻す
- */
-function toBody(gx: number, gy: number, pullX: number, pullY: number, s: number, form: Avatar["form"] = "round"): { copy: number; bulge: Bulge } {
-  let u = (gx / s) * 100;
-  let v = (gy / s) * 100;
-  let k = 100 / s;
-  let copy = 0;
-  if (form === "king") {
-    u = 50 + (u - 50) / 1.7;
-    v = 92 + (v - 92) / 1.7;
-    k /= 1.7;
-  }
-  const n = FORM_STACK[form] + 1;
-  if (n > 1) {
-    const sc = 88 / (56 + (n - 1) * FORM_STACK_STEP);
-    u = (u - 50) / sc + 50;
-    v = (v - 90) / sc + 90;
-    k /= sc;
-    copy = Math.min(n - 1, Math.max(0, Math.floor((90 - v) / FORM_STACK_STEP)));
-    v += copy * FORM_STACK_STEP;
-  }
-  let dx = pullX * k;
-  let dy = pullY * k;
-  const len = Math.hypot(dx, dy);
-  const max = 32; // つまんで伸びる長さの上限（viewBox の単位）
-  if (len > max) {
-    dx *= max / len;
-    dy *= max / len;
-  }
-  return { copy, bulge: { angle: outlineAngle(u, v), dx, dy } };
 }
