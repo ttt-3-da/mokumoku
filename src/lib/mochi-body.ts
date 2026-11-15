@@ -56,7 +56,7 @@ export function outlineNormal(angle: number): [number, number] {
 }
 
 /**
- * 引っぱられたときの顔の動き。つまんだ側ほど大きく引っぱる向きへずれて、その向きに少し伸びる。
+ * 引っぱられたときの顔やアクセサリーの動き。つまんだ側ほど大きく引っぱる向きへずれて、その向きに少し伸びる。
  * 伸ばす中心を反対側に置くので、つまんだ側の目やほっぺのほうがよく動く
  */
 export function faceStretch(bulge: Bulge): string {

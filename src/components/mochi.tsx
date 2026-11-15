@@ -130,6 +130,8 @@ export function Mochi({
     <>
               {/* 体 */}
               <BodyShape form={form} copy={copy} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
+              {/* 体の上にのるもの（顔・アクセサリー・ハチマキ・手）。もちの部屋で引っぱられたとき、いっしょに動く（data-mochi-face） */}
+              <g data-mochi-face={copy} style={STACK_BOX}>
               {color.shine && (
                 // きんいろ：左上に光の反射
                 <g fill="#fff" clipPath={`url(#body-${uid})`}>
@@ -154,8 +156,6 @@ export function Mochi({
                 </g>
               )}
 
-              {/* 顔（ほっぺ・目・口）。もちの部屋で引っぱられたとき、いっしょに伸びる（data-mochi-face） */}
-              <g data-mochi-face={copy} style={STACK_BOX}>
               {/* ほっぺ */}
               {cheek ? (
                 <g fill={cheek} opacity={hot || emote === "blush" ? 0.8 : 0.65}>
@@ -174,7 +174,6 @@ export function Mochi({
               </g>
 
               <Mouth kind={avatar.mouth} ink={ink} />
-              </g>
 
               {top && (
                 <>
@@ -217,6 +216,7 @@ export function Mochi({
                   <circle cx="86" cy="52" r="4.8" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
+              </g>
     </>
   );
 

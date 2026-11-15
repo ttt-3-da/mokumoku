@@ -147,7 +147,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         const b: Bulge | null = bulging && Number(path.dataset.mochiBody) === pc.copy ? { angle: pc.angle, dx: pc.x, dy: pc.y } : null;
         path.setAttribute("d", bodyOutline(square, b));
       });
-      // 顔も、つまんだ段だけいっしょに伸びる
+      // 顔やアクセサリーも、つまんだ段だけいっしょに動く
       squeezeRef.current?.querySelectorAll<SVGGElement>("[data-mochi-face]").forEach((g) => {
         const on = bulging && Number(g.dataset.mochiFace) === pc.copy;
         const tf = on ? faceStretch({ angle: pc.angle, dx: pc.x, dy: pc.y }) : "";
