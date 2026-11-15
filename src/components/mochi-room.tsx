@@ -95,8 +95,42 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const body = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
   const mode = useRef<"rest" | "drag" | "fly">("rest");
   const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
-  const [squish, setSquish] = useState(0);
   const raf = useRef<number | null>(null);
+
+  // スクイーズ：押しているあいだはむにゅーっとつぶれ、離すとじわーっと元の形に戻る
+  const squeezeRef = useRef<HTMLDivElement>(null);
+  const squeeze = useRef({ v: 0, holding: false });
+  const squeezeRaf = useRef<number | null>(null);
+
+  const runSqueeze = useCallback(() => {
+    if (squeezeRaf.current) return;
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000);
+      last = now;
+      const q = squeeze.current;
+      // 押すとき：わりと早くつぶれる / 戻るとき：ゆっくり、最後はさらにゆっくり
+      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0.45 : 1) : 0;
+      const rate = target > q.v ? 5 : 1.6;
+      q.v += (target - q.v) * (1 - Math.exp(-dt * rate));
+      if (!q.holding && q.v < 0.003) q.v = 0;
+      const el = squeezeRef.current;
+      if (el) el.style.transform = q.v ? `scale(${1 + q.v * 0.28}, ${1 - q.v * 0.38})` : "";
+      if (q.v === 0 && !q.holding) {
+        squeezeRaf.current = null;
+        return;
+      }
+      squeezeRaf.current = requestAnimationFrame(tick);
+    };
+    squeezeRaf.current = requestAnimationFrame(tick);
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (squeezeRaf.current) cancelAnimationFrame(squeezeRaf.current);
+    },
+    [],
+  );
 
   // もちの形は変えずに、位置だけ動かす
   const paint = useCallback(() => {
@@ -147,8 +181,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       last = now;
       const { w, h } = roomSize();
       const s = sizeRef.current;
+      const before = Math.abs(body.current.vy);
       const next = stepBounce(body.current, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
+      if (next.hit && next.y >= h - s - 0.5 && before > 200) {
+        squeeze.current.v = Math.max(squeeze.current.v, Math.min(0.8, before / 2200));
+        runSqueeze();
+      }
       paint();
       const resting = next.y >= h - s - 0.5 && Math.abs(next.vx) < 8 && next.vy === 0;
       if (mode.current === "fly" && !resting) {
@@ -158,7 +197,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       }
     };
     raf.current = requestAnimationFrame(tick);
-  }, [paint, roomSize]);
+  }, [paint, roomSize, runSqueeze]);
 
   function onMochiDown(e: ReactPointerEvent) {
     if (editing || !roomRef.current) return;
@@ -172,6 +211,8 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0 };
     body.current.vx = 0;
     body.current.vy = 0;
+    squeeze.current.holding = true;
+    runSqueeze();
   }
 
   // ドラッグ：もちは指についてくる
@@ -200,11 +241,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     if (mode.current !== "drag") return;
     const g = grab.current;
     const b = body.current;
+    squeeze.current.holding = false;
     if (!g.moved) {
-      // タップ：むにっとつぶれる
+      // タップ：短く押しても、むにゅっとつぶれてからじわーっと戻る
       b.vx = 0;
       b.vy = 0;
-      setSquish((n) => n + 1);
+      squeeze.current.v = Math.max(squeeze.current.v, 0.6);
+      runSqueeze();
     } else {
       // 勢いよく投げると、そのまま飛んでいく。ゆっくり離すと、その場から落ちる
       const keep = Math.hypot(g.vx, g.vy) < 400 ? 0.3 : 1;
@@ -308,12 +351,12 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           role="img"
           aria-label={`${displayName}のもち（タップ・ドラッグで遊べます）`}
         >
-          <div key={squish} className={squish > 0 ? "mochi-squish" : undefined} style={{ transformOrigin: "50% 100%" }}>
+          <div ref={squeezeRef} style={{ transformOrigin: "50% 100%" }}>
             <Mochi avatar={avatar} size={SIZE} seed={seed} />
           </div>
         </div>
       </div>
-      {!editing && <p className="text-xs text-ink-soft">もちをタップするとつぶれて、ドラッグすると伸びながら動きます。勢いよく投げると部屋中を跳ねまわります。</p>}
+      {!editing && <p className="text-xs text-ink-soft">もちを押すとむにゅーっとつぶれて、離すとじわーっと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。</p>}
 
       {editing && (
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-4 shadow-sm">
