@@ -6,8 +6,10 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { EmoteGlyph } from "@/components/emote-marks";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { StampArt } from "@/components/stamp-art";
+import { FurnitureArt } from "@/components/furniture-art";
+import { FURNITURE, isFurniture, isWallpaper, WALLPAPERS, type FurnitureId, type WallpaperId } from "@/lib/mochi-room";
 import { Button, Card } from "@/components/ui";
-import { parseShopItem, type Avatar, type ShopPart } from "@/lib/avatar";
+import { FORMS, parseShopItem, type Avatar, type AvatarForm, type ShopPart } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { EMOTES, getEmote, type EmoteId } from "@/lib/emotes";
 import { coinsShort, parseShopSort, SHOP_SORTS, sortShopItems, type ShopKind, type ShopSort } from "@/lib/shop";
@@ -23,8 +25,14 @@ function describe(itemId: string):
   | { type: "part"; part: ShopPart; value: string; label: string }
   | { type: "stamp"; id: StampId; label: string }
   | { type: "emote"; id: EmoteId; label: string }
+  | { type: "wallpaper"; id: WallpaperId; label: string }
+  | { type: "furniture"; id: FurnitureId; label: string }
+  | { type: "form"; id: AvatarForm; label: string }
   | null {
   const [k, v] = itemId.split(":");
+  if (k === "wallpaper") return isWallpaper(v) ? { type: "wallpaper", id: v, label: WALLPAPERS[v].label } : null;
+  if (k === "furniture") return isFurniture(v) ? { type: "furniture", id: v, label: FURNITURE[v].label } : null;
+  if (k === "form") return Object.hasOwn(FORMS, v) ? { type: "form", id: v as AvatarForm, label: FORMS[v as AvatarForm] } : null;
   if (k === "stamp") {
     const st = getStamp(v);
     return st ? { type: "stamp", id: st.id, label: st.label } : null;
@@ -52,8 +60,11 @@ const CATEGORIES: { kind: ShopKind; label: string; free: string; ready: boolean 
   { kind: "head", label: "頭の小物", free: "なし・リボン", ready: true },
   { kind: "neck", label: "首の小物", free: "なし", ready: true },
   { kind: "desk", label: "机の小物", free: "なし", ready: true },
+  { kind: "form", label: "フォルム", free: "まる", ready: true },
   { kind: "stamp", label: "スタンプ", free: freeNames(STAMPS), ready: true },
   { kind: "emote", label: "エモート", free: freeNames(EMOTES), ready: true },
+  { kind: "wallpaper", label: "部屋の壁紙", free: "クリーム・さくら", ready: true },
+  { kind: "furniture", label: "部屋の家具", free: "観葉植物・ラグ・スタンドライト", ready: true },
 ];
 
 const SORT_KEY = "mokumoku:shop-sort";
@@ -158,6 +169,19 @@ export function ShopView({
     });
   }
 
+  function changeForm(form: AvatarForm) {
+    setMessage(null);
+    startTransition(async () => {
+      const { error } = await createClient().rpc("set_avatar_form", { p_form: form });
+      if (error) {
+        setMessage({ ok: false, text: rpcErrorMessage(error) });
+        return;
+      }
+      setWearing((w) => ({ ...w, form }));
+      setMessage({ ok: true, text: `「${FORMS[form]}」になりました！` });
+    });
+  }
+
   function wear() {
     if (!selectedPart) return;
     setMessage(null);
@@ -190,7 +214,19 @@ export function ShopView({
       <div className="grid gap-5 md:grid-cols-[260px_1fr] md:items-start">
         {/* 試着 */}
         <Card className="flex flex-col items-center gap-3 md:sticky md:top-20">
-          {selectedInfo?.type === "stamp" ? (
+          {selectedInfo?.type === "wallpaper" ? (
+            <div className="flex h-36 w-full items-end justify-center rounded-2xl border border-line" style={{ background: WALLPAPERS[selectedInfo.id].bg }}>
+              <Mochi avatar={wearing} size={80} seed={seed} />
+            </div>
+          ) : selectedInfo?.type === "furniture" ? (
+            <div className="flex h-36 w-full items-center justify-center">
+              <FurnitureArt id={selectedInfo.id} className="max-h-32 w-3/4" />
+            </div>
+          ) : selectedInfo?.type === "form" ? (
+            <div className="flex h-40 items-end pb-2">
+              <Mochi key={`form-${cheer}`} avatar={{ ...wearing, form: selectedInfo.id }} size={selectedInfo.id === "king" ? 80 : 120} seed={seed} celebrate={cheer > 0} label={`${selectedInfo.label}のもち`} />
+            </div>
+          ) : selectedInfo?.type === "stamp" ? (
             <StampArt key={selectedInfo.id} id={selectedInfo.id} avatar={wearing} size={140} className="animate-mochi-drop" />
           ) : selectedInfo?.type === "emote" ? (
             <Mochi
@@ -211,7 +247,19 @@ export function ShopView({
             <>
               <p className="text-center font-bold">{selectedInfo.label}</p>
               {owned.has(selectedItem.item_id) ? (
-                !selectedPart ? (
+                selectedInfo.type === "form" ? (
+                  (wearing.form ?? "round") === selectedInfo.id ? (
+                    <p className="text-sm text-ink-soft">この形です</p>
+                  ) : (
+                    <Button onClick={() => changeForm(selectedInfo.id)} disabled={pending} className="w-full">
+                      {pending ? "変えています…" : "この形にする"}
+                    </Button>
+                  )
+                ) : selectedInfo.type === "wallpaper" || selectedInfo.type === "furniture" ? (
+                  <Link href="/mochi" className="text-sm font-bold text-accent-strong underline">
+                    持っています（もちの部屋で使う）
+                  </Link>
+                ) : !selectedPart ? (
                   <p className="text-sm text-ink-soft">持っています（部屋で使えます）</p>
                 ) : wearing[selectedPart.part] === selectedPart.value ? (
                   <p className="text-sm text-ink-soft">着ています</p>
@@ -299,7 +347,13 @@ export function ShopView({
                     }`}
                   >
                     <span className="anim-paused flex h-[60px] items-center">
-                      {info.type === "stamp" ? (
+                      {info.type === "wallpaper" ? (
+                        <span className="block h-12 w-16 rounded-xl border border-line" style={{ background: WALLPAPERS[info.id].bg }} />
+                      ) : info.type === "furniture" ? (
+                        <FurnitureArt id={info.id} className="max-h-12 w-16" />
+                      ) : info.type === "form" ? (
+                        <Mochi avatar={{ ...wearing, form: info.id }} size={info.id === "king" ? 34 : 56} seed={`shop-${item.item_id}`} />
+                      ) : info.type === "stamp" ? (
                         <StampArt id={info.id} avatar={wearing} size={56} />
                       ) : info.type === "emote" ? (
                         <EmoteGlyph emote={info.id} size={30} />
@@ -323,6 +377,8 @@ export function ShopView({
           <p className="text-xs text-ink-soft">
             {kind === "stamp" || kind === "emote"
               ? `${category.free} は無料で、部屋でいつでも使えます。`
+              : kind === "wallpaper" || kind === "furniture"
+                ? `${category.free} は無料で、もちの部屋の模様がえで使えます。`
               : `${category.free} は無料で、着せかえからいつでも選べます。`}
           </p>
         </div>

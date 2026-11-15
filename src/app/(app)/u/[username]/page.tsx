@@ -109,6 +109,9 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             {!isMe && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 {follow && <FollowButton username={profile.username} initialFollowing={follow.is_following} followsMe={follow.follows_me} />}
+                <Link href={`/u/${profile.username}/mochi`} className="text-sm text-ink-soft hover:underline">
+                  🏡 もちの部屋
+                </Link>
                 <ReportButton targetType="user" targetId={profile.id} />
               </div>
             )}
@@ -116,6 +119,9 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
               <div className="mt-3 flex flex-wrap gap-2">
                 <ButtonLink href="/avatar" variant="secondary">
                   もちを着せかえる
+                </ButtonLink>
+                <ButtonLink href="/mochi" variant="secondary">
+                  🏡 もちの部屋
                 </ButtonLink>
                 <ButtonLink href="/settings" variant="ghost">
                   プロフィールを編集

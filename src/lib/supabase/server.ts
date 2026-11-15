@@ -60,7 +60,7 @@ export const getAvatar = cache(async (userId: string): Promise<Avatar> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("avatars")
-    .select("color, eyes, mouth, cheeks, head, neck, desk, hachimaki")
+    .select("color, eyes, mouth, cheeks, head, neck, desk, hachimaki, form")
     .eq("user_id", userId)
     .maybeSingle();
   return parseAvatar(data);

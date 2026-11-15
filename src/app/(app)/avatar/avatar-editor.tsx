@@ -9,6 +9,7 @@ import {
   COLORS,
   DESK_ITEMS,
   EYES,
+  FORMS,
   HACHIMAKI,
   HEAD_ITEMS,
   isItemAvailable,
@@ -17,7 +18,10 @@ import {
   NECK_ITEMS,
   UNLOCKABLE_ITEMS,
   type Avatar,
+  type AvatarForm,
 } from "@/lib/avatar";
+import { rpcErrorMessage } from "@/lib/errors";
+import { createClient } from "@/lib/supabase/client";
 import { saveAvatar } from "./actions";
 
 type PartKey = keyof Avatar;
@@ -70,6 +74,21 @@ export function AvatarEditor({
     setMessage(null);
     // ハチマキは集中中にしか見えないので、選んだらプレビューを集中中にする
     if (key === "hachimaki") setPreviewState("focus");
+  }
+
+  // 形はすぐに保存する（ほかのパーツの「この見た目にする」とは別）
+  function changeForm(form: AvatarForm) {
+    setMessage(null);
+    startTransition(async () => {
+      const { error } = await createClient().rpc("set_avatar_form", { p_form: form });
+      if (error) {
+        setMessage({ ok: false, text: rpcErrorMessage(error) });
+        return;
+      }
+      setAvatar((a) => ({ ...a, form }));
+      setSaved((a) => ({ ...a, form }));
+      setMessage({ ok: true, text: `「${FORMS[form]}」になりました！` });
+    });
   }
 
   function save() {
@@ -128,6 +147,35 @@ export function AvatarEditor({
       </Card>
 
       <div className="flex flex-col gap-4">
+        <Card>
+          <h2 className="mb-3 flex items-baseline text-sm font-bold">
+            フォルム（形）
+            <Link href="/shop?kind=form" className="ml-auto text-xs font-normal text-ink-soft hover:underline">
+              🪙 ほかはショップで →
+            </Link>
+          </h2>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(84px,1fr))] gap-2">
+            {(Object.keys(FORMS) as AvatarForm[])
+              .filter((f) => f === "round" || ownedSet.has(`form:${f}`))
+              .map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  disabled={pending}
+                  onClick={() => changeForm(f)}
+                  aria-pressed={(avatar.form ?? "round") === f}
+                  className={`flex flex-col items-center gap-1 rounded-2xl border-2 p-2 text-xs transition ${
+                    (avatar.form ?? "round") === f ? "border-accent bg-sakura/10" : "border-transparent bg-cream hover:border-line"
+                  }`}
+                >
+                  <span className="anim-paused flex h-[60px] items-end">
+                    <Mochi avatar={{ ...avatar, form: f }} size={f === "king" ? 34 : 56} seed={`form-${f}`} />
+                  </span>
+                  <span className="leading-tight">{FORMS[f]}</span>
+                </button>
+              ))}
+          </div>
+        </Card>
         {SECTIONS.map((section) => (
           <Card key={section.key}>
             <h2 className="mb-3 flex items-baseline text-sm font-bold">

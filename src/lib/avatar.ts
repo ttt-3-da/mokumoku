@@ -281,6 +281,16 @@ export const HACHIMAKI = {
   indigo: "あい色",
 } as const;
 
+/** フォルム（もちの形）。まる以外はショップで買う（'form:ID'） */
+export const FORMS = {
+  round: "まる",
+  square: "しかく",
+  double: "2段もち",
+  triple: "3段もち",
+  king: "キングもち",
+} as const;
+export type AvatarForm = keyof typeof FORMS;
+
 export type AvatarColor = keyof typeof COLORS;
 export type AvatarEyes = keyof typeof EYES;
 export type AvatarMouth = keyof typeof MOUTHS;
@@ -299,6 +309,8 @@ export type Avatar = {
   desk: AvatarDesk;
   hachimaki: AvatarHachimaki;
   neck: AvatarNeck;
+  /** もちの形（古いデータには無いので省略可） */
+  form?: AvatarForm;
 };
 
 export const DEFAULT_AVATAR: Avatar = {
@@ -363,6 +375,7 @@ export function parseAvatar(raw: unknown): Avatar {
     desk: pick(v.desk, DESK_ITEMS, DEFAULT_AVATAR.desk),
     neck: pick(v.neck, NECK_ITEMS, DEFAULT_AVATAR.neck),
     hachimaki: pick(v.hachimaki, HACHIMAKI, DEFAULT_AVATAR.hachimaki),
+    form: pick(v.form, FORMS, "round"),
   };
 }
 

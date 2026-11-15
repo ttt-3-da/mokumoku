@@ -14,6 +14,7 @@ function navLinks(username: string, isAdmin = false) {
     { href: "/users", label: "さがす", icon: "🔍" },
     { href: "/shop", label: "ショップ", icon: "🛍️" },
     { href: "/avatar", label: "着せかえ", icon: "👕" },
+    { href: "/mochi", label: "もちの部屋", icon: "🏡" },
     { href: `/u/${username}`, label: "プロフィール", icon: "🙂" },
     { href: "/settings", label: "設定", icon: "⚙️" },
     ...(isAdmin ? [{ href: "/admin", label: "管理", icon: "🛠️" }] : []),
@@ -30,7 +31,7 @@ export function NavLinks({ username, isAdmin = false }: { username: string; isAd
   return (
     <nav
       aria-label="メニュー"
-      className="-mx-1 hidden min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap sm:flex"
+      className="-mx-1 hidden min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap [scrollbar-width:none] sm:flex"
     >
       {navLinks(username, isAdmin)
         .map((l) => {

@@ -1,5 +1,5 @@
-import { useId, type CSSProperties } from "react";
-import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type ColorDef } from "@/lib/avatar";
+import { useId, type CSSProperties, type SVGProps } from "react";
+import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type AvatarForm, type ColorDef } from "@/lib/avatar";
 import { EmoteMark } from "@/components/emote-marks";
 import type { EmoteId } from "@/lib/emotes";
 import { EXTRA_DESKS, EXTRA_HEADS, ExtraDesk, ExtraHead, NeckItem } from "./mochi-accessories";
@@ -74,6 +74,7 @@ export function Mochi({
 }: MochiProps) {
   const uid = useId().replace(/:/g, "");
   const color = COLORS[avatar.color] ?? COLORS.shiro;
+  const form = avatar.form ?? "round";
   // 暗い体の色では、目や口を明るい色で描く
   const ink = color.dark ? "#fff8ec" : INK;
   const bodyFill = color.paint ? `url(#paint-${uid})` : color.fill;
@@ -124,11 +125,18 @@ export function Mochi({
 
   return (
     <div className={classes} style={vars} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      <svg viewBox="0 0 100 100" width={size} height={size} overflow="visible">
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        overflow="visible"
+        // キングもちは足もとを基準に大きくする（並びの幅は変えない）
+        style={form === "king" ? { transform: "scale(1.7)", transformOrigin: "50% 92%" } : undefined}
+      >
         <defs>
           {color.paint && <BodyPaint id={`paint-${uid}`} paint={color.paint} />}
           <clipPath id={`body-${uid}`}>
-            <ellipse cx="50" cy="62" rx="34" ry="28" />
+            <BodyShape form={form} />
           </clipPath>
         </defs>
 
@@ -139,7 +147,7 @@ export function Mochi({
           <g className="mochi-pose">
             <g className="mochi-breathe">
               {/* 体 */}
-              <ellipse cx="50" cy="62" rx="34" ry="28" fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
+              <BodyShape form={form} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
               {color.shine && (
                 // きんいろ：左上に光の反射
                 <g fill="#fff" clipPath={`url(#body-${uid})`}>
@@ -432,6 +440,34 @@ export function DeskItem({ kind, size = 28, level = 1 }: { kind: Avatar["desk"];
       )}
     </svg>
   );
+}
+
+/**
+ * もちの体の形。顔（目は y=60、口は y=68 あたり）が体の上に来るように描く。
+ * 段のある形は下の段から順に重ねる
+ */
+function BodyShape({ form, ...paint }: { form: AvatarForm } & SVGProps<SVGEllipseElement>) {
+  switch (form) {
+    case "square":
+      return <rect x="16" y="34" width="68" height="56" rx="16" {...(paint as SVGProps<SVGRectElement>)} />;
+    case "double":
+      return (
+        <>
+          <ellipse cx="50" cy="78" rx="35" ry="14" {...paint} />
+          <ellipse cx="50" cy="58" rx="28" ry="21" {...paint} />
+        </>
+      );
+    case "triple":
+      return (
+        <>
+          <ellipse cx="50" cy="85" rx="35" ry="9" {...paint} />
+          <ellipse cx="50" cy="74" rx="30" ry="11" {...paint} />
+          <ellipse cx="50" cy="57" rx="25" ry="19" {...paint} />
+        </>
+      );
+    default:
+      return <ellipse cx="50" cy="62" rx="34" ry="28" {...paint} />;
+  }
 }
 
 /** 体の塗り分け。bands は上から等分の色の帯、gradient はなめらかなグラデーション */

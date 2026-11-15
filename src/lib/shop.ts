@@ -34,7 +34,7 @@ export function coinsShort(balance: number, price: number): number {
 }
 
 /** ショップの種類のタブ */
-export const SHOP_KINDS = ["color", "eyes", "mouth", "cheeks", "head", "neck", "desk", "stamp", "emote"] as const;
+export const SHOP_KINDS = ["color", "eyes", "mouth", "cheeks", "head", "neck", "desk", "form", "stamp", "emote", "wallpaper", "furniture"] as const;
 export type ShopKind = (typeof SHOP_KINDS)[number];
 
 export function parseShopKind(v: unknown): ShopKind {
