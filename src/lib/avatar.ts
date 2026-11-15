@@ -291,7 +291,7 @@ export const FORMS = {
 } as const;
 /** 2段・3段もちは同じもちを積む。下に足す数と、1段ぶんの高さ（viewBox の単位）。全体は枠に入るように小さくする */
 export const FORM_STACK = { round: 0, square: 0, double: 1, triple: 2, king: 0 } as const;
-export const FORM_STACK_STEP = 40;
+export const FORM_STACK_STEP = 56; // もち1つの高さぶん（重ならずに積む）
 
 export type AvatarForm = keyof typeof FORMS;
 
