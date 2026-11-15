@@ -1,3 +1,4 @@
+import { CheerSound } from "@/components/cheer-sound";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { DeskItem, Mochi } from "@/components/mochi";
@@ -56,6 +57,8 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-5 py-4">
       <Mochi avatar={avatar} size={120} seed={me.id} celebrate={minutes >= 1} className="animate-mochi-drop" />
+      {/* バッジや週の目標の達成があったら、お祝いの音 */}
+      {(newBadges.length > 0 || coins.some((c) => c.reason === "goal")) && <CheerSound />}
       <h1 className="text-2xl font-bold">おつかれさま！</h1>
       {session.end_reason && (
         <p role="status" className="w-full rounded-2xl bg-kinako/30 px-4 py-2 text-center text-sm">

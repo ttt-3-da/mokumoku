@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { Mochi } from "@/components/mochi";
 import { Button } from "@/components/ui";
 import { parseAvatar, type Avatar } from "@/lib/avatar";
@@ -36,32 +37,78 @@ export function OwnerMenu({
   onEvacuate: () => Promise<string | null>;
   onDeleteRoom: () => Promise<string | null>;
 }) {
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-cream p-3 text-sm">
-      <button type="button" onClick={onClose} className="self-start rounded-full bg-paper px-3 py-1 font-bold shadow-sm hover:bg-sakura/20">
-        ← 部屋に戻る
-      </button>
-      <InviteLink code={room.invite_code} />
-      {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
-      {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
-      <ScheduleEditor room={room} />
-      <ThemePicker roomId={room.id} theme={theme} onChange={onChangeTheme} />
-      <Bans roomId={room.id} />
-      <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
-      <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
-      <button
-        type="button"
-        onClick={() => {
-          onClose();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-        className="w-full rounded-full bg-paper px-3 py-2 font-bold shadow-sm hover:bg-sakura/20"
+  const [tab, setTab] = useState<SettingsTab>("basic");
+
+  // Esc で閉じる。開いている間は後ろの画面をスクロールさせない
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return createPortal(
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden />
+      {/* スマホは下から出るシート、広い画面は右から出る欄 */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="部屋の設定"
+        className="sheet-in absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-3xl bg-cream shadow-xl sm:inset-y-0 sm:left-auto sm:right-0 sm:max-h-none sm:w-[440px] sm:rounded-none sm:rounded-l-3xl"
       >
-        ← 部屋に戻る
-      </button>
-    </div>
+        <div className="flex items-center gap-2 border-b border-line px-4 py-3">
+          <button type="button" onClick={onClose} className="rounded-full bg-paper px-3 py-1 text-sm font-bold shadow-sm hover:bg-sakura/20">
+            ← 部屋に戻る
+          </button>
+          <h2 className="ml-auto font-bold">部屋の設定</h2>
+        </div>
+        <div className="flex gap-1 px-4 pt-3" role="tablist" aria-label="設定の種類">
+          {(Object.keys(SETTINGS_TABS) as SettingsTab[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              onClick={() => setTab(t)}
+              className={`rounded-full px-3 py-1 text-sm ${tab === t ? "bg-ink font-bold text-paper" : "bg-paper hover:bg-sakura/20"}`}
+            >
+              {SETTINGS_TABS[t]}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-4 overflow-y-auto p-4 text-sm">
+          {tab === "basic" && (
+            <>
+              <InviteLink code={room.invite_code} />
+              {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
+              <ScheduleEditor room={room} />
+              <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
+            </>
+          )}
+          {tab === "members" && (
+            <>
+              {room.visibility === "approval" && <PendingRequests roomId={room.id} />}
+              <Bans roomId={room.id} />
+              <p className="text-xs text-ink-soft">キック・BAN・モデレーターの任命は、在室者のもちを選ぶと出てきます。</p>
+            </>
+          )}
+          {tab === "look" && <ThemePicker roomId={room.id} theme={theme} onChange={onChangeTheme} />}
+        </div>
+      </div>
+    </div>,
+    document.body,
   );
 }
+
+const SETTINGS_TABS = { basic: "基本", members: "メンバー", look: "見た目" } as const;
+type SettingsTab = keyof typeof SETTINGS_TABS;
 
 const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"] as const;
 

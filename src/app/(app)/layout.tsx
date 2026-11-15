@@ -47,7 +47,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               </span>
             )}
           </Link>
-          <form action={signOut} className="shrink-0">
+          <form action={signOut} className="hidden shrink-0 sm:block">
             <button type="submit" className="text-sm text-ink-soft hover:text-ink">
               ログアウト
             </button>

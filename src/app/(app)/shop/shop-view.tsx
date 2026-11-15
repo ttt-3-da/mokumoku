@@ -12,6 +12,7 @@ import { rpcErrorMessage } from "@/lib/errors";
 import { EMOTES, getEmote, type EmoteId } from "@/lib/emotes";
 import { coinsShort, parseShopSort, SHOP_SORTS, sortShopItems, type ShopKind, type ShopSort } from "@/lib/shop";
 import { getStamp, STAMPS, type StampId } from "@/lib/stamps";
+import { playSound, useMuted } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
 import type { ShopItem, Wallet } from "@/lib/supabase/server";
 import { saveAvatar } from "../avatar/actions";
@@ -76,10 +77,13 @@ export function ShopView({
   const [kind, setKind] = useState<ShopKind>(initialKind);
   // エモートの試しを繰り返し見せるための番号
   const [replay, setReplay] = useState(0);
+  // 買えたときに、もちがぴょんと跳ねる
+  const [cheer, setCheer] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [sort, setSort] = useState<ShopSort>("recommended");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [muted] = useMuted();
 
   // 並び順はこのブラウザに覚えておく
   useEffect(() => {
@@ -144,6 +148,8 @@ export function ShopView({
         return;
       }
       setWallet((w) => ({ coins: typeof data === "number" ? data : w.coins - selectedItem.price, owned: [...w.owned, selectedItem.item_id] }));
+      setCheer((n) => n + 1);
+      if (!muted) playSound("cheer");
       setMessage({
         ok: true,
         text: selectedInfo.type === "part" ? `「${selectedInfo.label}」を買いました！` : `「${selectedInfo.label}」を買いました！部屋で使えます`,
@@ -197,7 +203,7 @@ export function ShopView({
             />
           ) : (
             <div className="flex items-end">
-              <Mochi avatar={preview} size={140} seed={seed} label="試着中のもち" />
+              <Mochi key={`cheer-${cheer}`} avatar={preview} size={140} seed={seed} celebrate={cheer > 0} label="試着中のもち" />
               <DeskItem kind={preview.desk} size={44} level={3} />
             </div>
           )}

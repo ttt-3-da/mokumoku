@@ -5,7 +5,7 @@ import { LastWeekCard, UpcomingSchedules, type UpcomingSchedule } from "@/compon
 import { WeeklyGoalBar } from "@/components/weekly-goal";
 import { isMondayInJapan, parseLastWeekSummary, parseWeeklyProgress } from "@/lib/goals";
 import { RoomCard } from "@/components/room-card";
-import { parseAvatar } from "@/lib/avatar";
+import { parseAvatar, type Avatar } from "@/lib/avatar";
 import type { FollowingActivity as FollowingActivityRow } from "@/lib/follow";
 import { ButtonLink, inputClass } from "@/components/ui";
 import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
@@ -45,6 +45,17 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const myRooms = (mineRes.data ?? []) as RoomCardData[];
   const filtering = Boolean(q || tag);
 
+  // いま勉強中の人数と、部屋に入っている人のもち
+  const shown = new Map<string, RoomCardData>();
+  for (const r of [...myRooms, ...publicRooms]) shown.set(r.id, r);
+  const studyingNow = [...shown.values()].reduce((n, r) => n + r.active_count, 0);
+  const busiest = publicRooms.filter((r) => r.active_count > 0 && r.active_count < r.capacity).sort((a, b) => b.active_count - a.active_count)[0];
+  const busyIds = [...shown.values()].filter((r) => r.active_count > 0).map((r) => r.id);
+  const facesRes = busyIds.length > 0 ? await supabase.rpc("room_member_avatars", { p_room_ids: busyIds }) : { data: null };
+  const faces = new Map<string, Avatar[]>(
+    ((facesRes.data ?? []) as { room_id: string; avatars: unknown[] }[]).map((r) => [r.room_id, (r.avatars ?? []).map(parseAvatar)]),
+  );
+
   // 表示中の公開部屋から、よく使われているタグを集めて絞り込み候補にする
   const tagCounts = new Map<string, number>();
   for (const r of publicRooms) for (const t of r.tags) tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
@@ -59,6 +70,21 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           ＋ 部屋をつくる
         </ButtonLink>
       </div>
+
+      {!filtering && (
+        <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-sakura/20 px-5 py-4">
+          <p className="text-sm">
+            いま <b className="text-3xl tabular-nums">{studyingNow}</b> 人が勉強中
+          </p>
+          {busiest ? (
+            <ButtonLink href={`/rooms/${busiest.id}`} className="ml-auto">
+              すぐ入る（{busiest.icon} {busiest.name}）
+            </ButtonLink>
+          ) : (
+            <span className="ml-auto text-xs text-ink-soft">一番乗りで部屋に入ってみよう</span>
+          )}
+        </div>
+      )}
 
       {!filtering && progress && (
         <div data-tour="goal">
@@ -118,7 +144,7 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           <h2 id="my-rooms" className="mb-3 font-bold">
             参加したことのある部屋
           </h2>
-          <RoomGrid rooms={myRooms} />
+          <RoomGrid rooms={myRooms} faces={faces} />
         </section>
       )}
 
@@ -134,7 +160,7 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
             {filtering ? "条件に合う部屋はありません。" : "まだ部屋がありません。最初の部屋をつくってみませんか？"}
           </p>
         ) : (
-          <RoomGrid rooms={publicRooms} tourFirst />
+          <RoomGrid rooms={publicRooms} faces={faces} tourFirst />
         )}
       </section>
     </div>
@@ -149,12 +175,12 @@ function lobbyHref(q: string, tag: string) {
 }
 
 /** tourFirst：最初の部屋を使い方の案内で指す */
-function RoomGrid({ rooms, tourFirst = false }: { rooms: RoomCardData[]; tourFirst?: boolean }) {
+function RoomGrid({ rooms, faces, tourFirst = false }: { rooms: RoomCardData[]; faces: Map<string, Avatar[]>; tourFirst?: boolean }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {rooms.map((r, i) => (
         <li key={r.id} data-tour={tourFirst && i === 0 ? "rooms" : undefined}>
-          <RoomCard room={r} />
+          <RoomCard room={r} faces={faces.get(r.id)} />
         </li>
       ))}
     </ul>

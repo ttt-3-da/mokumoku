@@ -32,6 +32,13 @@ export const SOUNDS = {
     { freq: 880, at: 0, dur: 0.5 },
     { freq: 880, at: 0.7, dur: 0.6 },
   ],
+  // お祝い（買った・バッジ・目標達成）：ド・ミ・ソ・ド
+  cheer: [
+    { freq: 523.25, at: 0, dur: 0.18, type: "triangle", gain: 0.3 },
+    { freq: 659.25, at: 0.1, dur: 0.18, type: "triangle", gain: 0.3 },
+    { freq: 783.99, at: 0.2, dur: 0.2, type: "triangle", gain: 0.3 },
+    { freq: 1046.5, at: 0.32, dur: 0.45, type: "triangle", gain: 0.28 },
+  ],
   // スタンプが届いた：キラッ
   stamp: [
     { freq: 1567.98, at: 0, dur: 0.14, type: "triangle", gain: 0.26 },

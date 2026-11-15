@@ -1,11 +1,14 @@
 import Link from "next/link";
+import { Mochi } from "@/components/mochi";
+import type { Avatar } from "@/lib/avatar";
 import { Tag } from "@/components/ui";
 import { TimerBadge } from "@/components/timer-badge";
 import type { RoomCard as RoomCardData } from "@/lib/types";
 
 const VISIBILITY_LABEL = { public: null, unlisted: "🔗 限定", approval: "🔒 承認制" } as const;
 
-export function RoomCard({ room }: { room: RoomCardData }) {
+/** faces：いま中にいる人のもち（多くても5人ぶん） */
+export function RoomCard({ room, faces = [] }: { room: RoomCardData; faces?: Avatar[] }) {
   const full = room.active_count >= room.capacity;
   const visibility = VISIBILITY_LABEL[room.visibility];
 
@@ -27,6 +30,14 @@ export function RoomCard({ room }: { room: RoomCardData }) {
           </div>
         </div>
       </div>
+      {faces.length > 0 && (
+        <div className="anim-paused flex items-end -space-x-2" aria-label={`いま${room.active_count}人が勉強中`}>
+          {faces.slice(0, 5).map((a, i) => (
+            <Mochi key={i} avatar={a} size={30} seed={`${room.id}-${i}`} state="focus" />
+          ))}
+          {room.active_count > 5 && <span className="ml-3 text-xs text-ink-soft">ほか{room.active_count - 5}人</span>}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <TimerBadge
           timer_mode={room.timer_mode}

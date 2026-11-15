@@ -456,3 +456,10 @@ body {
 :root[data-theme="dark"] .dark-silhouette {
   filter: grayscale(1) brightness(0) invert(1);
 }
+
+/* 部屋の設定のシート：スマホは下から、広い画面は右から */
+@keyframes sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes sheet-left { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.sheet-in { animation: sheet-up 0.22s ease-out; }
+@media (min-width: 640px) { .sheet-in { animation-name: sheet-left; } }
+@media (prefers-reduced-motion: reduce) { .sheet-in { animation: none; } }

@@ -204,11 +204,12 @@ const POSES: Record<StampId, Pose> = {
     mouth: "open",
     front: (hand) => (
       <>
-        <path d="M80 18 V70" stroke="#c9a574" strokeWidth={2.4} strokeLinecap="round" />
-        <circle cx="80" cy="24" r="7" fill="#f4a6b8" stroke="#d98197" strokeWidth={1.4} />
-        <circle cx="80" cy="38" r="7" fill="#fffaf3" stroke="#c9bfb3" strokeWidth={1.4} />
-        <circle cx="80" cy="52" r="7" fill="#8fb98b" stroke="#6e9a6a" strokeWidth={1.4} />
-        {hand(80, 66)}
+        <path d="M80 14 V72" stroke="#b08b5c" strokeWidth={2.4} strokeLinecap="round" />
+        {/* 三色だんご：桃・白・緑がはっきり分かるよう、色を濃いめにして縁取りも太くする */}
+        <circle cx="80" cy="24" r="7.5" fill="#f07a9b" stroke="#c24f70" strokeWidth={2} />
+        <circle cx="80" cy="39" r="7.5" fill="#ffffff" stroke="#9b8f80" strokeWidth={2} />
+        <circle cx="80" cy="54" r="7.5" fill="#6aa84f" stroke="#477a33" strokeWidth={2} />
+        {hand(80, 70)}
       </>
     ),
   },

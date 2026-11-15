@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { signOut } from "@/app/login/actions";
 
 function navLinks(username: string, isAdmin = false) {
   return [
@@ -12,6 +13,7 @@ function navLinks(username: string, isAdmin = false) {
     { href: "/follows", label: "フォロー", icon: "🤝" },
     { href: "/users", label: "さがす", icon: "🔍" },
     { href: "/shop", label: "ショップ", icon: "🛍️" },
+    { href: "/avatar", label: "着せかえ", icon: "👕" },
     { href: `/u/${username}`, label: "プロフィール", icon: "🙂" },
     { href: "/settings", label: "設定", icon: "⚙️" },
     ...(isAdmin ? [{ href: "/admin", label: "管理", icon: "🛠️" }] : []),
@@ -151,6 +153,12 @@ export function MobileMenu({ username, isAdmin = false }: { username: string; is
                   );
                 })}
               </nav>
+              <form action={signOut} className="mt-auto border-t border-line pt-3">
+                <button type="submit" className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-base text-ink-soft hover:bg-paper">
+                  <span aria-hidden>🚪</span>
+                  ログアウト
+                </button>
+              </form>
             </div>
           </div>,
           document.body,

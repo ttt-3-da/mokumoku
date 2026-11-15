@@ -525,12 +525,14 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
     <div className={`flex flex-col gap-5 ${hidden ? "anim-paused" : ""}`}>
       {idle.asking && <IdleDialog remainingMs={idle.remainingMs} avatar={me.avatar} seed={me.id} muted={muted} />}
       <header className="flex flex-col gap-3 rounded-3xl border border-line bg-paper p-4 shadow-sm">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <span className="text-2xl" aria-hidden>
             {room.icon}
           </span>
-          <h1 className="min-w-0 flex-1 truncate text-lg font-bold">{room.name}</h1>
-          <ConnectionBadge state={connection} />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-lg font-bold leading-tight">{room.name}</h1>
+            <ConnectionBadge state={connection} />
+          </div>
           <button
             type="button"
             onClick={toggleMuted}
@@ -544,13 +546,16 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
           {staffNow && (
             <Button
               variant="ghost"
-              className="shrink-0 px-3 py-1 text-xs"
+              className="shrink-0 px-2.5 py-1 text-xs"
               onClick={() => setMenuOpen((v) => !v)}
               aria-expanded={menuOpen}
             >
-              ⚙️ 設定
+              ⚙️<span className="hidden sm:inline"> 設定</span>
             </Button>
           )}
+          <Button variant="secondary" onClick={() => void leave()} disabled={leaving} className="shrink-0 px-3 py-1.5 text-xs">
+            {leaving ? "退室中…" : "退室する"}
+          </Button>
         </div>
         <TimerPanel
           room={room}
@@ -637,54 +642,27 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
 
       <footer className="flex flex-col gap-3 rounded-3xl border border-line bg-paper p-4 shadow-sm">
         <TaskEditor value={task} onChange={setTask} />
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              className="px-3 py-1.5 text-sm"
-              onClick={() => setEmoteOpen((v) => !v)}
-              aria-expanded={emoteOpen}
-              aria-controls="emote-palette"
-            >
-              🎭 エモート
-            </Button>
-            <span className="text-xs text-ink-soft">
-              {emoteCooling ? "少し待ってね…" : "自分のもちが動いて、部屋のみんなに見えます（いつでも使えます）"}
-            </span>
-          </div>
-          {emoteOpen && (
-            <div id="emote-palette" className="flex flex-col gap-2 rounded-2xl bg-cream p-2">
-              {emoteGroups(EMOTES.filter((e) => canUseEmote(e.id, ownedSet))).map((g) => (
-                <div key={g.group} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={g.group}>
-                  <span className="w-14 shrink-0 text-xs text-ink-soft">{g.group}</span>
-                  {g.items.map((e) => (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={() => emote(e.id)}
-                      disabled={emoteCooling}
-                      className="rounded-full bg-paper px-3 py-1 text-sm shadow-sm transition hover:scale-105 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
-                    >
-                      <EmoteGlyph emote={e.id} size={14} className="mr-1 inline-block align-[-2px]" />
-                      {e.label}
-                    </button>
-                  ))}
-                </div>
-              ))}
-              <Link href="/shop?kind=emote" className="self-end text-xs text-ink-soft underline">
-                ショップでエモートをふやす
-              </Link>
-            </div>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+        {/* スタンプとエモート：丸いボタンを横に並べる（多いときは横にスクロール） */}
+        <div className="-mx-1 flex items-center gap-2 overflow-x-auto px-1 pb-1">
+          <button
+            type="button"
+            onClick={() => setEmoteOpen((v) => !v)}
+            aria-expanded={emoteOpen}
+            aria-controls="emote-palette"
+            aria-label="🎭 エモート"
+            title="エモート"
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl transition hover:scale-110 ${emoteOpen ? "bg-ink text-paper" : "bg-sakura/30 hover:bg-sakura/50"}`}
+          >
+            🎭
+          </button>
+          <span className="h-8 w-px shrink-0 bg-line" aria-hidden />
           {myStamps.map((s) => (
             <button
               key={s.id}
               type="button"
               onClick={() => stamp(s.id)}
               disabled={!allowed || !targetPresent || cooling}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-cream transition hover:scale-110 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cream transition hover:scale-110 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
               aria-label={`${s.label} スタンプを送る`}
               title={s.label}
             >
@@ -693,23 +671,46 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
           ))}
           <Link
             href="/shop?kind=stamp"
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-dashed border-line text-lg text-ink-soft hover:bg-cream"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-dashed border-line text-lg text-ink-soft hover:bg-cream"
             aria-label="ショップでスタンプをふやす"
             title="ショップでスタンプをふやす"
           >
             ＋
           </Link>
-          <span className="text-xs text-ink-soft">
-            {!allowed
-              ? "スタンプは休憩中に送れます"
-              : targetPresent
-                ? `${members.find((m) => m.userId === target)?.displayName} さんに送る`
-                : "送る相手のもちをタップ"}
-          </span>
-          <Button variant="secondary" onClick={() => void leave()} disabled={leaving} className="ml-auto">
-            {leaving ? "退室中…" : "退室する"}
-          </Button>
         </div>
+        <p className="text-xs text-ink-soft">
+          {emoteCooling
+            ? "少し待ってね…"
+            : !allowed
+              ? "🎭 エモートはいつでも、スタンプは休憩中に送れます"
+              : targetPresent
+                ? `${members.find((m) => m.userId === target)?.displayName} さんにスタンプを送る`
+                : "🎭 で自分のもちが動きます。スタンプは送る相手のもちをタップ"}
+        </p>
+        {emoteOpen && (
+          <div id="emote-palette" className="flex flex-col gap-2 rounded-2xl bg-cream p-2">
+            {emoteGroups(EMOTES.filter((e) => canUseEmote(e.id, ownedSet))).map((g) => (
+              <div key={g.group} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={g.group}>
+                <span className="w-14 shrink-0 text-xs text-ink-soft">{g.group}</span>
+                {g.items.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => emote(e.id)}
+                    disabled={emoteCooling}
+                    className="rounded-full bg-paper px-3 py-1 text-sm shadow-sm transition hover:scale-105 hover:bg-sakura/20 disabled:opacity-40 disabled:hover:scale-100"
+                  >
+                    <EmoteGlyph emote={e.id} size={14} className="mr-1 inline-block align-[-2px]" />
+                    {e.label}
+                  </button>
+                ))}
+              </div>
+            ))}
+            <Link href="/shop?kind=emote" className="self-end text-xs text-ink-soft underline">
+              ショップでエモートをふやす
+            </Link>
+          </div>
+        )}
         {error && (
           <p role="alert" className="text-sm text-red-600">
             {error}
@@ -726,7 +727,7 @@ function ConnectionBadge({ state }: { state: "connecting" | "live" | "error" }) 
     live: { text: "● 接続中", cls: "bg-yomogi/25 text-green-800" },
     error: { text: "接続エラー", cls: "bg-red-50 text-red-700" },
   }[state];
-  return <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${map.cls}`}>{map.text}</span>;
+  return <span className={`inline-block rounded-full px-2 text-[11px] leading-5 ${map.cls}`}>{map.text}</span>;
 }
 
 function TimerPanel({
@@ -782,11 +783,11 @@ function TimerPanel({
 
   if (timer.kind === "idle") {
     return (
-      <div className="flex items-baseline justify-between text-sm">
+      <div className="flex flex-col gap-1 text-sm sm:flex-row sm:items-baseline sm:justify-between">
         <span className="text-ink-soft">
           🍅 タイマーはまだ始まっていません（集中{room.focus_minutes}分・休憩{room.break_minutes}分）
         </span>
-        <span className="tabular-nums">
+        <span className="self-end whitespace-nowrap tabular-nums sm:self-auto">
           あなたの学習時間 <b className="text-lg">{formatClock(elapsed)}</b>
         </span>
       </div>
@@ -796,12 +797,12 @@ function TimerPanel({
   const isFocus = timer.kind === "focus";
   return (
     <div className="flex flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-2">
+      <div className="flex flex-col items-center gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-2">
         <span className="text-sm font-bold">
           {isFocus ? "✏️ 集中" : "🍵 休憩"}・{timer.round}ラウンド目
           <span className="ml-2 text-xs font-normal text-ink-soft">完了 🍅×{timer.completedRounds}</span>
         </span>
-        <span className="text-2xl font-bold tabular-nums" aria-live="off">
+        <span className="text-4xl font-bold tabular-nums sm:text-2xl" aria-live="off">
           {formatClock(timer.remainingMs)}
         </span>
       </div>
