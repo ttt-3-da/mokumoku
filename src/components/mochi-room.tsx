@@ -95,7 +95,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const mochiRef = useRef<HTMLDivElement>(null);
   const body = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
   const mode = useRef<"rest" | "drag" | "fly">("rest");
-  const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
+  const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0, fx: 0, fy: 0 });
   const raf = useRef<number | null>(null);
 
   // もちもちのスクイーズ：押すとむにっと横に広がってつぶれ、離すとぽよんと弾んで元に戻る
@@ -127,10 +127,10 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       let ty = 0;
       if (pinching) {
         const g = grab.current;
-        const speed = Math.hypot(g.vx, g.vy);
-        const lead = Math.min(8, speed / 120) / (speed || 1);
-        tx = pc.nx * 13 + g.vx * lead;
-        ty = pc.ny * 13 + g.vy * lead;
+        const b = body.current;
+        // つまんだところから指までのずれ（px）を viewBox の単位にして、そのぶん伸ばす
+        tx = pc.nx * 4 + (g.fx - (b.x + g.ox)) * pc.k;
+        ty = pc.ny * 4 + (g.fy - (b.y + g.oy)) * pc.k;
       }
       const pk = pinching ? 90 : 170;
       const pd = pinching ? 16 : 10;
@@ -248,7 +248,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const px = e.clientX - r.left;
     const py = e.clientY - r.top;
     mode.current = "drag";
-    grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0 };
+    grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0, fx: px, fy: py };
     body.current.vx = 0;
     body.current.vy = 0;
     squeeze.current.holding = true;
@@ -272,9 +272,21 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     g.lastY = py;
     g.lastT = now;
     if (Math.hypot(px - g.startX, py - g.startY) > 6) g.moved = true;
+    // 引っぱると、つまんだところが指まで伸びる。伸びきったら体ごとついてくる
     const s = sizeRef.current;
-    body.current.x = Math.min(r.width - s, Math.max(0, px - g.ox));
-    body.current.y = Math.min(r.height - s, Math.max(0, py - g.oy));
+    const b = body.current;
+    const dx = px - (b.x + g.ox);
+    const dy = py - (b.y + g.oy);
+    const d = Math.hypot(dx, dy);
+    const max = s * STRETCH_MAX;
+    if (d > max) {
+      b.x += dx * (1 - max / d);
+      b.y += dy * (1 - max / d);
+    }
+    b.x = Math.min(r.width - s, Math.max(0, b.x));
+    b.y = Math.min(r.height - s, Math.max(0, b.y));
+    g.fx = px;
+    g.fy = py;
     paint();
   }
 
@@ -292,8 +304,8 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     } else {
       // 勢いよく投げると、そのまま飛んでいく。ゆっくり離すと、その場から落ちる
       const keep = Math.hypot(g.vx, g.vy) < 400 ? 0.3 : 1;
-      b.vx = g.vx * keep;
-      b.vy = g.vy * keep;
+      b.vx = g.vx * keep + (g.fx - (b.x + g.ox)) * 4;
+      b.vy = g.vy * keep + (g.fy - (b.y + g.oy)) * 4;
     }
     mode.current = "fly";
     fly();
@@ -459,6 +471,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     </div>
   );
 }
+
+/** 引っぱって伸びる長さの上限（もちの大きさに対して） */
+const STRETCH_MAX = 0.45;
 
 /**
  * もちの箱の中でつまんだ位置（px）を、Mochi の viewBox の中に直して、輪郭のどこか・何段目かを出す。
