@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
 import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
-import { bodyOutline, outlineAngle, type Bulge } from "@/lib/mochi-body";
+import { bodyOutline, faceTransform, kickJelly, newJelly, outlineAngle, stepJelly, type Bulge, type Jelly } from "@/lib/mochi-body";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -100,11 +100,12 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const pull = useRef({ tx: 0, ty: 0 });
   // つまんだ場所（もちの箱の中の位置）。そこだけ体が指のほうへ曲がって出っ張る
   const pinch = useRef({ ax: 0, ay: 0, active: false });
-  const bent = useRef(false);
   const form = avatar.form ?? "round";
+  // 体の輪郭をスライムのように動かす（積んだもちは1段ずつ）
+  const jellies = useRef<Jelly[]>([]);
+  const jellyRaf = useRef<number | null>(null);
   // anchor：つまんで引っぱっているとき。うしろ側を残して、指の向きにだけ伸びる
   const stretch = useRef({ angle: 0, k: 0, anchor: false });
-  const [squish, setSquish] = useState(0);
   const raf = useRef<number | null>(null);
 
   const paint = useCallback(() => {
@@ -121,21 +122,79 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const thin = anchor ? 1 / Math.sqrt(1 + k * 1.4) : 1 - k * 0.45;
     el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}rad) scale(${1 + k}, ${thin}) rotate(${-angle}rad)`;
 
-    // つまんだところだけ、体の輪郭が指のほうへ曲がって出っ張る
-    const bodies = el.querySelectorAll<SVGPathElement>("[data-mochi-body]");
-    const pc = pinch.current;
-    const square = form === "square";
-    if (!pc.active) {
-      if (bent.current) {
-        bodies.forEach((b) => b.setAttribute("d", bodyOutline(square)));
-        bent.current = false;
-      }
-      return;
-    }
-    const hit = toBody(pc.ax, pc.ay, pull.current.tx - x, pull.current.ty - y, s, form);
-    bodies.forEach((b) => b.setAttribute("d", bodyOutline(square, Number(b.dataset.mochiBody) === hit.copy ? hit.bulge : null)));
-    bent.current = true;
-  }, [form]);
+  }, []);
+
+  /** スライムの動きを回す。揺れがおさまって、つまんでいなければ止まる */
+  const runJelly = useCallback(
+    (kick?: { dvx: number; dvy: number }) => {
+      const el = mochiRef.current;
+      if (!el) return;
+      const square = form === "square";
+      const n = (FORM_STACK[form] ?? 0) + 1;
+      while (jellies.current.length < n) jellies.current.push(newJelly());
+      if (kick) jellies.current.forEach((j) => kickJelly(j, square, kick.dvx, kick.dvy));
+      if (jellyRaf.current) return;
+      let last = performance.now();
+      let prev = { x: body.current.x, y: body.current.y, vx: 0, vy: 0 };
+      let quiet = 0;
+      const tick = (now: number) => {
+        const node = mochiRef.current;
+        if (!node) {
+          jellyRaf.current = null;
+          return;
+        }
+        const dt = Math.min(0.033, Math.max(0.001, (now - last) / 1000));
+        last = now;
+        const s = sizeRef.current;
+        const scale = toBody(0, 0, 1, 0, s, form).bulge.dx; // 1px が viewBox でいくつか
+        // 体の速さが変わったぶんだけ、輪郭に勢いを伝える（急に止まるとべちゃっとつぶれる）
+        const vx = (body.current.x - prev.x) / dt;
+        const vy = (body.current.y - prev.y) / dt;
+        let dvx = (vx - prev.vx) * scale;
+        let dvy = (vy - prev.vy) * scale;
+        const dl = Math.hypot(dvx, dvy);
+        if (dl > 900) {
+          dvx *= 900 / dl;
+          dvy *= 900 / dl;
+        }
+        prev = { x: body.current.x, y: body.current.y, vx, vy };
+        const pc = pinch.current;
+        const hit = pc.active ? toBody(pc.ax, pc.ay, pull.current.tx - body.current.x, pull.current.ty - body.current.y, s, form) : null;
+        let energy = 0;
+        jellies.current.slice(0, n).forEach((j, c) => {
+          if (dl > 30) kickJelly(j, square, dvx, dvy);
+          energy += stepJelly(j, square, dt, hit && hit.copy === c ? hit.bulge : null);
+        });
+        node.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => {
+          const j = jellies.current[Number(path.dataset.mochiBody)];
+          if (j) path.setAttribute("d", bodyOutline(square, j));
+        });
+        node.querySelectorAll<SVGGElement>("[data-mochi-face]").forEach((g) => {
+          const j = jellies.current[Number(g.dataset.mochiFace)];
+          if (j) g.setAttribute("transform", faceTransform(square, j));
+        });
+        quiet = energy < 0.08 && !pc.active && mode.current === "rest" ? quiet + dt : 0;
+        if (quiet > 0.4) {
+          // 止まったら元の形にもどしておく
+          jellies.current = [];
+          node.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => path.setAttribute("d", bodyOutline(square)));
+          node.querySelectorAll<SVGGElement>("[data-mochi-face]").forEach((g) => g.removeAttribute("transform"));
+          jellyRaf.current = null;
+          return;
+        }
+        jellyRaf.current = requestAnimationFrame(tick);
+      };
+      jellyRaf.current = requestAnimationFrame(tick);
+    },
+    [form],
+  );
+
+  useEffect(
+    () => () => {
+      if (jellyRaf.current) cancelAnimationFrame(jellyRaf.current);
+    },
+    [],
+  );
 
   const roomSize = useCallback(() => {
     const r = roomRef.current?.getBoundingClientRect();
@@ -181,9 +240,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const next = stepBounce(body.current, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
       const speed = Math.hypot(next.vx, next.vy);
-      stretch.current = next.hit
-        ? { angle: Math.atan2(next.vy, next.vx) + Math.PI / 2, k: 0.25, anchor: false }
-        : { angle: Math.atan2(next.vy, next.vx), k: Math.min(0.35, speed / 3000), anchor: false };
+      stretch.current = { angle: Math.atan2(next.vy, next.vx), k: Math.min(0.12, speed / 6000), anchor: false };
       paint();
       const resting = next.y >= h - s - 0.5 && Math.abs(next.vx) < 8 && next.vy === 0;
       if (mode.current === "fly" && !resting) {
@@ -224,8 +281,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         dy = t.ty - b.y;
         d = max;
       }
-      // 体はほんの少しだけ指のほうへ伸びる（大きく伸びるのは、つまんだところ）
-      stretch.current = d > 0.5 ? { angle: Math.atan2(dy, dx), k: Math.min(0.06, (d / s) * 0.06), anchor: true } : { angle: 0, k: 0, anchor: false };
+      // 形はスライムの動きで出すので、体そのものは伸ばさない
+      void d;
+      stretch.current = { angle: 0, k: 0, anchor: false };
       paint();
       raf.current = requestAnimationFrame(tick);
     };
@@ -247,6 +305,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     body.current.vx = 0;
     body.current.vy = 0;
     dragLoop();
+    runJelly();
   }
 
   function onMochiMove(e: ReactPointerEvent) {
@@ -282,7 +341,8 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       body.current.vy = 0;
       stretch.current = { angle: 0, k: 0, anchor: false };
       mode.current = "fly";
-      setSquish((n) => n + 1);
+      // 上からむにゅっと押されたように、ぷるぷるつぶれる
+      runJelly({ dvx: 0, dvy: -520 });
       fly();
       return;
     }
@@ -295,6 +355,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     b.vy = g.vy * keep + (t.ty - b.y) * 6;
     mode.current = "fly";
     fly();
+    runJelly();
   }
 
   const wp = WALLPAPERS[wallpaper];
@@ -390,7 +451,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           role="img"
           aria-label={`${displayName}のもち（タップ・ドラッグで遊べます）`}
         >
-          <div key={squish} className={squish > 0 ? "mochi-squish" : undefined} style={{ transformOrigin: "50% 100%" }}>
+          <div style={{ transformOrigin: "50% 100%" }}>
             <Mochi avatar={avatar} size={SIZE} seed={seed} />
           </div>
         </div>
