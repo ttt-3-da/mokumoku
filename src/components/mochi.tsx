@@ -123,34 +123,10 @@ export function Mochi({
     .filter(Boolean)
     .join(" ");
 
-  return (
-    <div className={classes} style={vars} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
-      <svg
-        viewBox="0 0 100 100"
-        width={size}
-        height={size}
-        overflow="visible"
-        // キングもちは足もとを基準に大きくする（並びの幅は変えない）
-        style={form === "king" ? { transform: "scale(1.7)", transformOrigin: "50% 92%" } : undefined}
-      >
-        <defs>
-          {color.paint && <BodyPaint id={`paint-${uid}`} paint={color.paint} />}
-          <clipPath id={`body-${uid}`}>
-            <BodyShape form={form} />
-          </clipPath>
-        </defs>
-
-        {/* 影 */}
-        <ellipse className="mochi-shadow" cx="50" cy="93" rx="28" ry="4" fill="#000" opacity="0.1" />
-
-        <g className="mochi-jump">
-          <g className="mochi-pose">
-            <g className="mochi-breathe">
-              {/* 2段・3段もちは、同じ大きさのもちを下に重ねる（顔は一番上のもち） */}
-              {Array.from({ length: FORM_STACK[form] }, (_, i) => (
-                <ellipse key={i} cx="50" cy={62 - i * FORM_STACK_STEP} rx="34" ry="28" fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
-              ))}
-              <g transform={FORM_STACK[form] > 0 ? `translate(0 ${-FORM_STACK[form] * FORM_STACK_STEP})` : undefined}>
+  const stack = FORM_STACK[form] + 1;
+  // もち1つぶん。top：一番上のもち（首・頭の小物と手はここにだけ付ける）
+  const figure = (top: boolean) => (
+    <>
               {/* 体 */}
               <BodyShape form={form} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
               {color.shine && (
@@ -196,21 +172,25 @@ export function Mochi({
 
               <Mouth kind={avatar.mouth} ink={ink} />
 
-              <NeckItem kind={avatar.neck} uid={uid} />
-              {EXTRA_HEADS.has(avatar.head) ? (
-                <ExtraHead kind={avatar.head} ink={ink} fill={color.fill} edge={color.edge} />
-              ) : (
-                <HeadItem kind={avatar.head} />
+              {top && (
+                <>
+                  <NeckItem kind={avatar.neck} uid={uid} />
+                  {EXTRA_HEADS.has(avatar.head) ? (
+                    <ExtraHead kind={avatar.head} ink={ink} fill={color.fill} edge={color.edge} />
+                  ) : (
+                    <HeadItem kind={avatar.head} />
+                  )}
+                </>
               )}
 
               {/* 手（必要なときだけ小さな丸） */}
-              {focus && !busy && (
+              {top && focus && !busy && (
                 <g className="mochi-pen">
                   <rect x="72" y="66" width="3.4" height="17" rx="1.2" fill="#5b8def" transform="rotate(35 73.7 74.5)" />
                   <circle cx="74" cy="82" r="4.6" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
-              {onBreak && !busy && (
+              {top && onBreak && !busy && (
                 <g className="mochi-cup">
                   <rect x="41" y="73" width="18" height="14" rx="4" fill="#8fb98b" />
                   <rect x="44" y="77" width="12" height="2.6" rx="1.3" fill="#fff" opacity="0.5" />
@@ -222,17 +202,50 @@ export function Mochi({
                   </g>
                 </g>
               )}
-              {handsUp && (
+              {top && handsUp && (
                 <g className={emote === "stretch" ? "mochi-hands-stretch" : undefined} fill={color.fill} stroke={color.edge} strokeWidth={STROKE}>
                   <circle cx="13" cy="44" r="4.8" />
                   <circle cx="87" cy="44" r="4.8" />
                 </g>
               )}
-              {(leaving || emote === "wave" || emote === "cheer") && (
+              {top && (leaving || emote === "wave" || emote === "cheer") && (
                 <g className="mochi-wave">
                   <circle cx="86" cy="52" r="4.8" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
+    </>
+  );
+
+  return (
+    <div className={classes} style={vars} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true}>
+      <svg
+        viewBox="0 0 100 100"
+        width={size}
+        height={size}
+        overflow="visible"
+        // キングもちは足もとを基準に大きくする（並びの幅は変えない）
+        style={form === "king" ? { transform: "scale(1.7)", transformOrigin: "50% 92%" } : undefined}
+      >
+        <defs>
+          {color.paint && <BodyPaint id={`paint-${uid}`} paint={color.paint} />}
+          <clipPath id={`body-${uid}`}>
+            <BodyShape form={form} />
+          </clipPath>
+        </defs>
+
+        {/* 影 */}
+        <ellipse className="mochi-shadow" cx="50" cy="93" rx="28" ry="4" fill="#000" opacity="0.1" />
+
+        <g className="mochi-jump">
+          <g className="mochi-pose">
+            <g className="mochi-breathe">
+              {/* 2段・3段もちは、同じもちを積んで、全体が枠に入るように小さくする（どのもちにも顔がある） */}
+              <g transform={stack > 1 ? `translate(50 90) scale(${88 / (56 + (stack - 1) * FORM_STACK_STEP)}) translate(-50 -90)` : undefined}>
+                {Array.from({ length: stack }, (_, i) => (
+                  <g key={i} transform={i > 0 ? `translate(0 ${-i * FORM_STACK_STEP})` : undefined}>
+                    {figure(i === stack - 1)}
+                  </g>
+                ))}
               </g>
             </g>
           </g>

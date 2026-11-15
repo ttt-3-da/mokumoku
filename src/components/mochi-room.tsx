@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
-import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
+import type { Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -151,9 +151,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     };
   }, [paint, roomSize]);
 
-  const form = avatar.form ?? "round";
-  const ceiling = useCallback(() => (FORM_STACK[form] * FORM_STACK_STEP * sizeRef.current) / 100, [form]);
-
   const fly = useCallback(() => {
     let last = performance.now();
     const tick = (now: number) => {
@@ -161,7 +158,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       last = now;
       const { w, h } = roomSize();
       const s = sizeRef.current;
-      const next = stepBounce(body.current, dt, w, h, s, ceiling());
+      const next = stepBounce(body.current, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
       const speed = Math.hypot(next.vx, next.vy);
       stretch.current = next.hit
@@ -178,7 +175,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       }
     };
     raf.current = requestAnimationFrame(tick);
-  }, [paint, roomSize, ceiling]);
+  }, [paint, roomSize]);
 
   // つまんでいるあいだ：体はゆっくり指を追いかけ、離れたぶんだけびよーんと伸びる
   const dragLoop = useCallback(() => {
@@ -245,7 +242,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     if (Math.hypot(px - g.startX, py - g.startY) > 6) g.moved = true;
     pull.current = {
       tx: Math.min(r.width - sizeRef.current, Math.max(0, px - g.ox)),
-      ty: Math.min(r.height - sizeRef.current, Math.max(ceiling(), py - g.oy)),
+      ty: Math.min(r.height - sizeRef.current, Math.max(0, py - g.oy)),
     };
   }
 
