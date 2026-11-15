@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
-import type { Avatar } from "@/lib/avatar";
+import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
+import { bodyOutline, outlineAngle, outlineNormal, type Bulge } from "@/lib/mochi-body";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -100,6 +101,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   // もちもちのスクイーズ：押すとむにっと横に広がってつぶれ、離すとぽよんと弾んで元に戻る
   const squeezeRef = useRef<HTMLDivElement>(null);
   const squeeze = useRef({ v: 0, vel: 0, holding: false });
+  // つまんだところの出っ張り（viewBox の単位）。ばねで出たり戻ったりする
+  const pinch = useRef({ copy: 0, angle: 0, nx: 0, ny: 0, k: 1, x: 0, y: 0, vx: 0, vy: 0 });
+  const form = avatar.form ?? "round";
   const squeezeRaf = useRef<number | null>(null);
 
   const runSqueeze = useCallback(() => {
@@ -110,12 +114,40 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       last = now;
       const q = squeeze.current;
       // ばねで動かす：押すとむにーっとつぶれ、離すと少し伸び上がってから、ぽよんぽよんと落ち着く
-      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0.35 : 0.85) : 0;
+      // つまんで動かしているときは、体はつぶさない（出っ張りだけ）
+      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0 : 0.85) : 0;
       const k = q.holding ? 70 : 160; // 押すときはやわらかく、戻るときは弾むように
       const c = q.holding ? 14 : 9;
       q.vel += (-k * (q.v - target) - c * q.vel) * dt;
       q.v = Math.max(-0.35, Math.min(1, q.v + q.vel * dt));
-      if (!q.holding && Math.abs(q.v) < 0.003 && Math.abs(q.vel) < 0.02) {
+      // つまんで動かしているあいだは、つまんだところが指の向きへむにっと出っ張る
+      const pc = pinch.current;
+      const pinching = q.holding && mode.current === "drag" && grab.current.moved;
+      let tx = 0;
+      let ty = 0;
+      if (pinching) {
+        const g = grab.current;
+        const speed = Math.hypot(g.vx, g.vy);
+        const lead = Math.min(8, speed / 120) / (speed || 1);
+        tx = pc.nx * 13 + g.vx * lead;
+        ty = pc.ny * 13 + g.vy * lead;
+      }
+      const pk = pinching ? 90 : 170;
+      const pd = pinching ? 16 : 10;
+      pc.vx += (-pk * (pc.x - tx) - pd * pc.vx) * dt;
+      pc.vy += (-pk * (pc.y - ty) - pd * pc.vy) * dt;
+      pc.x += pc.vx * dt;
+      pc.y += pc.vy * dt;
+      const bulging = pinching || Math.hypot(pc.x, pc.y) > 0.05 || Math.hypot(pc.vx, pc.vy) > 0.5;
+      if (!bulging) {
+        pc.x = pc.y = pc.vx = pc.vy = 0;
+      }
+      const square = form === "square";
+      squeezeRef.current?.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => {
+        const b: Bulge | null = bulging && Number(path.dataset.mochiBody) === pc.copy ? { angle: pc.angle, dx: pc.x, dy: pc.y } : null;
+        path.setAttribute("d", bodyOutline(square, b));
+      });
+      if (!q.holding && !bulging && Math.abs(q.v) < 0.003 && Math.abs(q.vel) < 0.02) {
         q.v = 0;
         q.vel = 0;
       }
@@ -124,14 +156,14 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const sx = 1 / Math.sqrt(sy);
       const el = squeezeRef.current;
       if (el) el.style.transform = q.v ? `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` : "";
-      if (q.v === 0 && q.vel === 0 && !q.holding) {
+      if (q.v === 0 && q.vel === 0 && !q.holding && !bulging) {
         squeezeRaf.current = null;
         return;
       }
       squeezeRaf.current = requestAnimationFrame(tick);
     };
     squeezeRaf.current = requestAnimationFrame(tick);
-  }, []);
+  }, [form]);
 
   useEffect(
     () => () => {
@@ -220,6 +252,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     body.current.vx = 0;
     body.current.vy = 0;
     squeeze.current.holding = true;
+    pinch.current = { ...pinch.current, ...pinchPoint(px - body.current.x, py - body.current.y, sizeRef.current, form) };
     runSqueeze();
   }
 
@@ -425,4 +458,32 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       )}
     </div>
   );
+}
+
+/**
+ * もちの箱の中でつまんだ位置（px）を、Mochi の viewBox の中に直して、輪郭のどこか・何段目かを出す。
+ * キングもちは 1.7 倍、2段・3段もちは縮めて積んでいるので、そのぶん戻す。k は 1px が viewBox でいくつか
+ */
+function pinchPoint(gx: number, gy: number, s: number, form: NonNullable<Avatar["form"]>) {
+  let u = (gx / s) * 100;
+  let v = (gy / s) * 100;
+  let k = 100 / s;
+  let copy = 0;
+  if (form === "king") {
+    u = 50 + (u - 50) / 1.7;
+    v = 92 + (v - 92) / 1.7;
+    k /= 1.7;
+  }
+  const n = FORM_STACK[form] + 1;
+  if (n > 1) {
+    const sc = 88 / (56 + (n - 1) * FORM_STACK_STEP);
+    u = (u - 50) / sc + 50;
+    v = (v - 90) / sc + 90;
+    k /= sc;
+    copy = Math.min(n - 1, Math.max(0, Math.floor((90 - v) / FORM_STACK_STEP)));
+    v += copy * FORM_STACK_STEP;
+  }
+  const angle = outlineAngle(u, v);
+  const [nx, ny] = outlineNormal(angle);
+  return { copy, angle, nx, ny, k };
 }

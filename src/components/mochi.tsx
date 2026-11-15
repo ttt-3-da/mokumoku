@@ -1,6 +1,7 @@
 import { useId, type CSSProperties, type SVGProps } from "react";
 import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type AvatarForm, type ColorDef, FORM_STACK, FORM_STACK_STEP } from "@/lib/avatar";
 import { EmoteMark } from "@/components/emote-marks";
+import { bodyOutline } from "@/lib/mochi-body";
 import type { EmoteId } from "@/lib/emotes";
 import { EXTRA_DESKS, EXTRA_HEADS, ExtraDesk, ExtraHead, NeckItem } from "./mochi-accessories";
 import { EXTRA_CHEEKS, EXTRA_EYES, EXTRA_MOUTHS, ExtraCheeks, ExtraEyes, ExtraMouth } from "./mochi-parts";
@@ -125,10 +126,10 @@ export function Mochi({
 
   const stack = FORM_STACK[form] + 1;
   // もち1つぶん。top：一番上のもち（首・頭の小物と手はここにだけ付ける）
-  const figure = (top: boolean) => (
+  const figure = (top: boolean, copy = 0) => (
     <>
               {/* 体 */}
-              <BodyShape form={form} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
+              <BodyShape form={form} copy={copy} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
               {color.shine && (
                 // きんいろ：左上に光の反射
                 <g fill="#fff" clipPath={`url(#body-${uid})`}>
@@ -243,7 +244,7 @@ export function Mochi({
               <g style={STACK_BOX} transform={stack > 1 ? `translate(50 90) scale(${88 / (56 + (stack - 1) * FORM_STACK_STEP)}) translate(-50 -90)` : undefined}>
                 {Array.from({ length: stack }, (_, i) => (
                   <g key={i} style={STACK_BOX} transform={i > 0 ? `translate(0 ${-i * FORM_STACK_STEP})` : undefined}>
-                    {figure(i === stack - 1)}
+                    {figure(i === stack - 1, i)}
                   </g>
                 ))}
               </g>
@@ -468,9 +469,9 @@ export function DeskItem({ kind, size = 28, level = 1 }: { kind: Avatar["desk"];
 /** 積むための移動・縮小は viewBox を基準にする（.mochi g の fill-box だと右にずれる） */
 const STACK_BOX: CSSProperties = { transformBox: "view-box", transformOrigin: "0 0" };
 
-function BodyShape({ form, ...paint }: { form: AvatarForm } & SVGProps<SVGEllipseElement>) {
-  if (form === "square") return <rect x="16" y="34" width="68" height="56" rx="16" {...(paint as SVGProps<SVGRectElement>)} />;
-  return <ellipse cx="50" cy="62" rx="34" ry="28" {...paint} />;
+/** copy：積んだもちの何段目か。もちの部屋で、つまんだところを出っ張らせる目印（data-mochi-body） */
+function BodyShape({ form, copy, ...paint }: { form: AvatarForm; copy?: number } & SVGProps<SVGPathElement>) {
+  return <path d={bodyOutline(form === "square")} data-mochi-body={copy} strokeLinejoin="round" {...paint} />;
 }
 
 /** 体の塗り分け。bands は上から等分の色の帯、gradient はなめらかなグラデーション */
