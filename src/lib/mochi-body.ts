@@ -53,7 +53,7 @@ function wrap(a: number) {
 const K_REST = 120; // 元の形に戻ろうとする強さ（ほっぺのように張りがある）
 const K_NEIGHBOR = 300; // となりの点とそろおうとする強さ（なめらかさ）
 const DAMP = 9; // 揺れのおさまりやすさ（離すとぱちんと戻って、少しだけ揺れる）
-const K_PINCH = 600; // つまんだところが指についていく強さ（指の半分ほどだけ伸びる）
+const K_PINCH = 600; // つまんだところが指についていく強さ
 const PINCH_SPREAD = 0.34; // 指についていく範囲（せまいほど、つまんだところだけ細く伸びる）
 const K_AREA = 1; // 体の広さを保とうとする強さ
 const MAX_OFFSET = 120;
