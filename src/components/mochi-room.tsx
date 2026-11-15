@@ -265,7 +265,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const b = body.current;
       const t = pull.current;
       // 体はほとんどその場に残り、出っ張りが伸びきると体ごと引っぱられる
-      const f = 1 - Math.exp(-dt * 0.6);
+      const f = 1 - Math.exp(-dt * 0.2);
       const { w: rw, h: rh } = roomSize();
       b.x = Math.min(rw - s, Math.max(0, b.x + (t.tx - b.x) * f));
       b.y = Math.min(rh - s, Math.max(0, b.y + (t.ty - b.y) * f));
@@ -273,7 +273,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       let dy = t.ty - b.y;
       let d = Math.hypot(dx, dy);
       // 伸びすぎたら体ごと引っぱられる
-      const max = s * 0.75;
+      const max = s * 0.95;
       if (d > max) {
         b.x = t.tx - (dx / d) * max;
         b.y = t.ty - (dy / d) * max;
@@ -545,7 +545,7 @@ function toBody(gx: number, gy: number, pullX: number, pullY: number, s: number,
   let dx = pullX * k;
   let dy = pullY * k;
   const len = Math.hypot(dx, dy);
-  const max = 70;
+  const max = 95;
   if (len > max) {
     dx *= max / len;
     dy *= max / len;

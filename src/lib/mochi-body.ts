@@ -1,7 +1,7 @@
 /**
  * もちの体の輪郭（viewBox 100×100 の中、中心 50,62・横 34・縦 28）。
- * 輪郭の点をばねでつないだ「スライム」として動かす。つまむとそこから流れるように伸び、
- * 離したりぶつかったりすると、ぷるぷる揺れながら元の形に戻る。体の広さ（面積）はなるべく変えない
+ * 輪郭の点をばねでつないで動かす。つまむと、ほっぺをつねったようにそこだけ細く伸び、
+ * 離すとぱちんと戻る。ぶつかると少しつぶれて揺れる
  */
 export const CX = 50;
 export const CY = 62;
@@ -50,13 +50,13 @@ function wrap(a: number) {
   return Math.atan2(Math.sin(a), Math.cos(a));
 }
 
-const K_REST = 40; // 元の形に戻ろうとする強さ
-const K_NEIGHBOR = 520; // となりの点とそろおうとする強さ（なめらかさ）
-const DAMP = 4.5; // 揺れのおさまりやすさ（小さいほどぷるぷるが長い）
-const K_PINCH = 700; // つまんだところが指についていく強さ
-const PINCH_SPREAD = 0.7; // 指についていく範囲（輪郭の角度）
-const K_AREA = 6; // 体の広さを保とうとする強さ
-const MAX_OFFSET = 95;
+const K_REST = 120; // 元の形に戻ろうとする強さ（ほっぺのように張りがある）
+const K_NEIGHBOR = 300; // となりの点とそろおうとする強さ（なめらかさ）
+const DAMP = 9; // 揺れのおさまりやすさ（離すとぱちんと戻って、少しだけ揺れる）
+const K_PINCH = 1500; // つまんだところが指についていく強さ
+const PINCH_SPREAD = 0.34; // 指についていく範囲（せまいほど、つまんだところだけ細く伸びる）
+const K_AREA = 1; // 体の広さを保とうとする強さ
+const MAX_OFFSET = 120;
 
 /**
  * 体ごと動いたときの勢いを、輪郭の点に伝える。dvx, dvy は体の速さの変化（viewBox の単位/秒）。
@@ -73,8 +73,8 @@ export function kickJelly(j: Jelly, square: boolean, dvx: number, dvy: number) {
     const ny = (r[i * 2 + 1] - CY) / RY;
     // 速さが変わった向きの側（止まった壁の反対側）ほど大きく動く
     const w = 0.25 + 0.75 * Math.max(0, nx * ux + ny * uy);
-    j.v[i * 2] -= dvx * 0.33 * w;
-    j.v[i * 2 + 1] -= dvy * 0.33 * w;
+    j.v[i * 2] -= dvx * 0.2 * w;
+    j.v[i * 2 + 1] -= dvy * 0.2 * w;
   }
 }
 
@@ -107,7 +107,7 @@ export function stepJelly(j: Jelly, square: boolean, dt: number, pinch: Bulge | 
         const d = wrap(t - pinch.angle);
         const w = Math.exp(-(d * d) / (2 * PINCH_SPREAD * PINCH_SPREAD));
         // 持ち上げると、つまんでいない下のほうはだらんと垂れる
-        const sag = Math.max(0, -pinch.dy) * 0.22 * Math.max(0, Math.sin(t)) * (1 - w);
+        const sag = Math.max(0, -pinch.dy) * 0.04 * Math.max(0, Math.sin(t)) * (1 - w);
         fx += K_PINCH * w * (pinch.dx * w - j.o[ix]);
         fy += K_PINCH * w * (pinch.dy * w - j.o[iy]) + K_REST * sag;
       }
@@ -167,9 +167,9 @@ export function faceTransform(square: boolean, j: Jelly): string {
   }
   cx /= N;
   cy /= N;
-  const sx = Math.min(1.15, Math.max(0.88, (maxX - minX) / (RX * 2)));
-  const sy = Math.min(1.15, Math.max(0.88, (maxY - minY) / (RY * 2)));
-  return `translate(${(CX + cx * 0.8).toFixed(2)} ${(CY + cy * 0.8).toFixed(2)}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(${-CX} ${-CY})`;
+  const sx = Math.min(1.06, Math.max(0.95, (maxX - minX) / (RX * 2)));
+  const sy = Math.min(1.06, Math.max(0.95, (maxY - minY) / (RY * 2)));
+  return `translate(${(CX + cx * 0.25).toFixed(2)} ${(CY + cy * 0.25).toFixed(2)}) scale(${sx.toFixed(3)} ${sy.toFixed(3)}) translate(${-CX} ${-CY})`;
 }
 
 /** viewBox 上の点が、輪郭のどの角度にあたるか */
