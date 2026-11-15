@@ -54,3 +54,20 @@ export function outlineNormal(angle: number): [number, number] {
   const l = Math.hypot(nx, ny) || 1;
   return [nx / l, ny / l];
 }
+
+/**
+ * 引っぱられたときの顔の動き。つまんだ側ほど大きく引っぱる向きへずれて、その向きに少し伸びる。
+ * 伸ばす中心を反対側に置くので、つまんだ側の目やほっぺのほうがよく動く
+ */
+export function faceStretch(bulge: Bulge): string {
+  const len = Math.hypot(bulge.dx, bulge.dy);
+  if (len < 0.3) return "";
+  const ux = bulge.dx / len;
+  const uy = bulge.dy / len;
+  const st = Math.min(0.22, len / 180); // 伸びる割合
+  const deg = (Math.atan2(uy, ux) * 180) / Math.PI;
+  const ox = CX - ux * 18;
+  const oy = CY - uy * 14;
+  const f = (n: number) => n.toFixed(2);
+  return `translate(${f(ox + bulge.dx * 0.08)} ${f(oy + bulge.dy * 0.08)}) rotate(${f(deg)}) scale(${f(1 + st)} ${f(1 - st * 0.35)}) rotate(${f(-deg)}) translate(${f(-ox)} ${f(-oy)})`;
+}

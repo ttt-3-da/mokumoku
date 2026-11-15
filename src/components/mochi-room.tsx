@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
 import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
-import { bodyOutline, outlineAngle, outlineNormal, type Bulge } from "@/lib/mochi-body";
+import { bodyOutline, faceStretch, outlineAngle, outlineNormal, type Bulge } from "@/lib/mochi-body";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -146,6 +146,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       squeezeRef.current?.querySelectorAll<SVGPathElement>("[data-mochi-body]").forEach((path) => {
         const b: Bulge | null = bulging && Number(path.dataset.mochiBody) === pc.copy ? { angle: pc.angle, dx: pc.x, dy: pc.y } : null;
         path.setAttribute("d", bodyOutline(square, b));
+      });
+      // 顔も、つまんだ段だけいっしょに伸びる
+      squeezeRef.current?.querySelectorAll<SVGGElement>("[data-mochi-face]").forEach((g) => {
+        const on = bulging && Number(g.dataset.mochiFace) === pc.copy;
+        const tf = on ? faceStretch({ angle: pc.angle, dx: pc.x, dy: pc.y }) : "";
+        if (tf) g.setAttribute("transform", tf);
+        else g.removeAttribute("transform");
       });
       if (!q.holding && !bulging && Math.abs(q.v) < 0.003 && Math.abs(q.vel) < 0.02) {
         q.v = 0;
