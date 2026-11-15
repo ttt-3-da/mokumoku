@@ -273,7 +273,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       let dy = t.ty - b.y;
       let d = Math.hypot(dx, dy);
       // 伸びすぎたら体ごと引っぱられる
-      const max = s * 0.95;
+      const max = s * 0.4;
       if (d > max) {
         b.x = t.tx - (dx / d) * max;
         b.y = t.ty - (dy / d) * max;
@@ -545,7 +545,7 @@ function toBody(gx: number, gy: number, pullX: number, pullY: number, s: number,
   let dx = pullX * k;
   let dy = pullY * k;
   const len = Math.hypot(dx, dy);
-  const max = 95;
+  const max = 32; // つまんで伸びる長さの上限（viewBox の単位）
   if (len > max) {
     dx *= max / len;
     dy *= max / len;
