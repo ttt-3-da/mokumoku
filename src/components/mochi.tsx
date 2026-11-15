@@ -130,8 +130,6 @@ export function Mochi({
     <>
               {/* 体 */}
               <BodyShape form={form} copy={copy} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
-              {/* 顔など。もちの部屋で体がスライムのように動くとき、いっしょに動かす（data-mochi-face） */}
-              <g data-mochi-face={copy} style={STACK_BOX}>
               {color.shine && (
                 // きんいろ：左上に光の反射
                 <g fill="#fff" clipPath={`url(#body-${uid})`}>
@@ -216,7 +214,6 @@ export function Mochi({
                   <circle cx="86" cy="52" r="4.8" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
-              </g>
     </>
   );
 
