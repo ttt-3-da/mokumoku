@@ -97,9 +97,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
   const raf = useRef<number | null>(null);
 
-  // スクイーズ：押しているあいだはむにゅーっとつぶれ、離すとじわーっと元の形に戻る
+  // もちもちのスクイーズ：押すとむにっと横に広がってつぶれ、離すとぽよんと弾んで元に戻る
   const squeezeRef = useRef<HTMLDivElement>(null);
-  const squeeze = useRef({ v: 0, holding: false });
+  const squeeze = useRef({ v: 0, vel: 0, holding: false });
   const squeezeRaf = useRef<number | null>(null);
 
   const runSqueeze = useCallback(() => {
@@ -109,14 +109,22 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
       const q = squeeze.current;
-      // 押すとき：わりと早くつぶれる / 戻るとき：ゆっくり、最後はさらにゆっくり
-      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0.45 : 1) : 0;
-      const rate = target > q.v ? 5 : 1.6;
-      q.v += (target - q.v) * (1 - Math.exp(-dt * rate));
-      if (!q.holding && q.v < 0.003) q.v = 0;
+      // ばねで動かす：押すとむにーっとつぶれ、離すと少し伸び上がってから、ぽよんぽよんと落ち着く
+      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0.35 : 0.85) : 0;
+      const k = q.holding ? 70 : 160; // 押すときはやわらかく、戻るときは弾むように
+      const c = q.holding ? 14 : 9;
+      q.vel += (-k * (q.v - target) - c * q.vel) * dt;
+      q.v = Math.max(-0.35, Math.min(1, q.v + q.vel * dt));
+      if (!q.holding && Math.abs(q.v) < 0.003 && Math.abs(q.vel) < 0.02) {
+        q.v = 0;
+        q.vel = 0;
+      }
+      // 高さが縮んだぶん、横にふくらむ（もちの量は変わらない）
+      const sy = 1 - q.v * 0.36;
+      const sx = 1 / Math.sqrt(sy);
       const el = squeezeRef.current;
-      if (el) el.style.transform = q.v ? `scale(${1 + q.v * 0.28}, ${1 - q.v * 0.38})` : "";
-      if (q.v === 0 && !q.holding) {
+      if (el) el.style.transform = q.v ? `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` : "";
+      if (q.v === 0 && q.vel === 0 && !q.holding) {
         squeezeRaf.current = null;
         return;
       }
@@ -185,7 +193,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const next = stepBounce(body.current, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
       if (next.hit && next.y >= h - s - 0.5 && before > 200) {
-        squeeze.current.v = Math.max(squeeze.current.v, Math.min(0.8, before / 2200));
+        squeeze.current.vel += Math.min(9, before / 220);
         runSqueeze();
       }
       paint();
@@ -243,10 +251,10 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const b = body.current;
     squeeze.current.holding = false;
     if (!g.moved) {
-      // タップ：短く押しても、むにゅっとつぶれてからじわーっと戻る
+      // タップ：短く押しても、むにっとつぶれてからぽよんと戻る
       b.vx = 0;
       b.vy = 0;
-      squeeze.current.v = Math.max(squeeze.current.v, 0.6);
+      squeeze.current.vel = Math.max(squeeze.current.vel, 7);
       runSqueeze();
     } else {
       // 勢いよく投げると、そのまま飛んでいく。ゆっくり離すと、その場から落ちる
@@ -356,7 +364,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           </div>
         </div>
       </div>
-      {!editing && <p className="text-xs text-ink-soft">もちを押すとむにゅーっとつぶれて、離すとじわーっと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。</p>}
+      {!editing && <p className="text-xs text-ink-soft">もちを押すとむにっとつぶれて、離すとぽよんと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。</p>}
 
       {editing && (
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-4 shadow-sm">
