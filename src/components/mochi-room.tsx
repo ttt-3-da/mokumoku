@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
-import type { Avatar } from "@/lib/avatar";
+import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
   FURNITURE,
@@ -94,8 +94,11 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   const mochiRef = useRef<HTMLDivElement>(null);
   const body = useRef({ x: 0, y: 0, vx: 0, vy: 0 });
   const mode = useRef<"rest" | "drag" | "fly">("rest");
-  const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false });
-  const stretch = useRef({ angle: 0, k: 0 });
+  const grab = useRef({ ox: 0, oy: 0, lastX: 0, lastY: 0, lastT: 0, startX: 0, startY: 0, moved: false, vx: 0, vy: 0 });
+  // つまんでいるあいだ、もちが行きたい場所（指の位置）。体はあとからついてくる
+  const pull = useRef({ tx: 0, ty: 0 });
+  // anchor：つまんで引っぱっているとき。うしろ側を残して、指の向きにだけ伸びる
+  const stretch = useRef({ angle: 0, k: 0, anchor: false });
   const [squish, setSquish] = useState(0);
   const raf = useRef<number | null>(null);
 
@@ -103,9 +106,15 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const el = mochiRef.current;
     if (!el) return;
     const { x, y } = body.current;
-    const { angle, k } = stretch.current;
-    // 動く向きに伸びて、横は少し細くなる
-    el.style.transform = `translate(${x}px, ${y}px) rotate(${angle}rad) scale(${1 + k}, ${1 - k * 0.45}) rotate(${-angle}rad)`;
+    const { angle, k, anchor } = stretch.current;
+    const s = sizeRef.current;
+    // 引っぱっているときは、伸びたぶんだけ指のほうへずらす（うしろ側はその場に残る）
+    const shift = anchor ? (k * s) / 2 : 0;
+    const sx = x + Math.cos(angle) * shift;
+    const sy = y + Math.sin(angle) * shift;
+    // 動く向きに伸びて、そのぶん細くなる（つままれてびよーんと伸びる）
+    const thin = anchor ? 1 / Math.sqrt(1 + k * 1.4) : 1 - k * 0.45;
+    el.style.transform = `translate(${sx}px, ${sy}px) rotate(${angle}rad) scale(${1 + k}, ${thin}) rotate(${-angle}rad)`;
   }, []);
 
   const roomSize = useCallback(() => {
@@ -142,6 +151,9 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     };
   }, [paint, roomSize]);
 
+  const form = avatar.form ?? "round";
+  const ceiling = useCallback(() => (FORM_STACK[form] * FORM_STACK_STEP * sizeRef.current) / 100, [form]);
+
   const fly = useCallback(() => {
     let last = performance.now();
     const tick = (now: number) => {
@@ -149,22 +161,56 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       last = now;
       const { w, h } = roomSize();
       const s = sizeRef.current;
-      const next = stepBounce(body.current, dt, w, h, s);
+      const next = stepBounce(body.current, dt, w, h, s, ceiling());
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
       const speed = Math.hypot(next.vx, next.vy);
-      stretch.current = next.hit ? { angle: Math.atan2(next.vy, next.vx) + Math.PI / 2, k: 0.25 } : { angle: Math.atan2(next.vy, next.vx), k: Math.min(0.35, speed / 3000) };
+      stretch.current = next.hit
+        ? { angle: Math.atan2(next.vy, next.vx) + Math.PI / 2, k: 0.25, anchor: false }
+        : { angle: Math.atan2(next.vy, next.vx), k: Math.min(0.35, speed / 3000), anchor: false };
       paint();
       const resting = next.y >= h - s - 0.5 && Math.abs(next.vx) < 8 && next.vy === 0;
       if (mode.current === "fly" && !resting) {
         raf.current = requestAnimationFrame(tick);
       } else {
         mode.current = "rest";
-        stretch.current = { angle: 0, k: 0 };
+        stretch.current = { angle: 0, k: 0, anchor: false };
         paint();
       }
     };
     raf.current = requestAnimationFrame(tick);
-  }, [paint, roomSize]);
+  }, [paint, roomSize, ceiling]);
+
+  // つまんでいるあいだ：体はゆっくり指を追いかけ、離れたぶんだけびよーんと伸びる
+  const dragLoop = useCallback(() => {
+    let last = performance.now();
+    const tick = (now: number) => {
+      if (mode.current !== "drag") return;
+      const dt = Math.min(0.032, (now - last) / 1000);
+      last = now;
+      const s = sizeRef.current;
+      const b = body.current;
+      const t = pull.current;
+      const f = 1 - Math.exp(-dt * 5);
+      b.x += (t.tx - b.x) * f;
+      b.y += (t.ty - b.y) * f;
+      let dx = t.tx - b.x;
+      let dy = t.ty - b.y;
+      let d = Math.hypot(dx, dy);
+      // 伸びすぎたら体ごと引っぱられる
+      const max = s * 1.3;
+      if (d > max) {
+        b.x = t.tx - (dx / d) * max;
+        b.y = t.ty - (dy / d) * max;
+        dx = t.tx - b.x;
+        dy = t.ty - b.y;
+        d = max;
+      }
+      stretch.current = d > 0.5 ? { angle: Math.atan2(dy, dx), k: d / s, anchor: true } : { angle: 0, k: 0, anchor: false };
+      paint();
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+  }, [paint]);
 
   function onMochiDown(e: ReactPointerEvent) {
     if (editing || !roomRef.current) return;
@@ -175,9 +221,11 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const px = e.clientX - r.left;
     const py = e.clientY - r.top;
     mode.current = "drag";
-    grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false };
+    grab.current = { ox: px - body.current.x, oy: py - body.current.y, lastX: px, lastY: py, lastT: performance.now(), startX: px, startY: py, moved: false, vx: 0, vy: 0 };
+    pull.current = { tx: body.current.x, ty: body.current.y };
     body.current.vx = 0;
     body.current.vy = 0;
+    dragLoop();
   }
 
   function onMochiMove(e: ReactPointerEvent) {
@@ -188,18 +236,17 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const g = grab.current;
     const now = performance.now();
     const dt = Math.max(1, now - g.lastT) / 1000;
-    // 速さはなめらかにならす
-    body.current.vx = body.current.vx * 0.6 + ((px - g.lastX) / dt) * 0.4;
-    body.current.vy = body.current.vy * 0.6 + ((py - g.lastY) / dt) * 0.4;
+    // 指の速さはなめらかにならす（離したときに投げる勢い）
+    g.vx = g.vx * 0.6 + ((px - g.lastX) / dt) * 0.4;
+    g.vy = g.vy * 0.6 + ((py - g.lastY) / dt) * 0.4;
     g.lastX = px;
     g.lastY = py;
     g.lastT = now;
     if (Math.hypot(px - g.startX, py - g.startY) > 6) g.moved = true;
-    body.current.x = Math.min(r.width - sizeRef.current, Math.max(0, px - g.ox));
-    body.current.y = Math.min(r.height - sizeRef.current, Math.max(0, py - g.oy));
-    const speed = Math.hypot(body.current.vx, body.current.vy);
-    stretch.current = { angle: Math.atan2(body.current.vy, body.current.vx), k: Math.min(0.6, speed / 1500) };
-    paint();
+    pull.current = {
+      tx: Math.min(r.width - sizeRef.current, Math.max(0, px - g.ox)),
+      ty: Math.min(r.height - sizeRef.current, Math.max(ceiling(), py - g.oy)),
+    };
   }
 
   function onMochiUp() {
@@ -207,16 +254,21 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const g = grab.current;
     if (!g.moved) {
       // タップ：むにっとつぶれる
+      body.current.vx = 0;
+      body.current.vy = 0;
+      stretch.current = { angle: 0, k: 0, anchor: false };
       mode.current = "fly";
       setSquish((n) => n + 1);
       fly();
       return;
     }
-    const speed = Math.hypot(body.current.vx, body.current.vy);
-    if (speed < 400) {
-      body.current.vx *= 0.3;
-      body.current.vy *= 0.3;
-    }
+    // 離すと、伸びていたぶん指のほうへぽよんと戻る。勢いよく投げていればそのまま飛んでいく
+    const b = body.current;
+    const t = pull.current;
+    const speed = Math.hypot(g.vx, g.vy);
+    const keep = speed < 400 ? 0.3 : 1;
+    b.vx = g.vx * keep + (t.tx - b.x) * 6;
+    b.vy = g.vy * keep + (t.ty - b.y) * 6;
     mode.current = "fly";
     fly();
   }

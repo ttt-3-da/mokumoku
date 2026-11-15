@@ -65,6 +65,9 @@ export type RoomCard = Pick<
   | "is_persistent"
 > & { active_count: number };
 
+/** 部屋を作った人（room_owners の戻り値） */
+export type RoomOwner = { room_id: string; username: string; display_name: string; is_official: boolean };
+
 export type Occupant = {
   user_id: string;
   display_name: string;

@@ -1,14 +1,15 @@
 import Link from "next/link";
+import { OfficialBadge } from "@/components/official-badge";
 import { Mochi } from "@/components/mochi";
 import type { Avatar } from "@/lib/avatar";
 import { Tag } from "@/components/ui";
 import { TimerBadge } from "@/components/timer-badge";
-import type { RoomCard as RoomCardData } from "@/lib/types";
+import type { RoomCard as RoomCardData, RoomOwner } from "@/lib/types";
 
 const VISIBILITY_LABEL = { public: null, unlisted: "🔗 限定", approval: "🔒 承認制" } as const;
 
 /** faces：いま中にいる人のもち（多くても5人ぶん） */
-export function RoomCard({ room, faces = [] }: { room: RoomCardData; faces?: Avatar[] }) {
+export function RoomCard({ room, faces = [], owner }: { room: RoomCardData; faces?: Avatar[]; owner?: RoomOwner }) {
   const full = room.active_count >= room.capacity;
   const visibility = VISIBILITY_LABEL[room.visibility];
 
@@ -23,6 +24,12 @@ export function RoomCard({ room, faces = [] }: { room: RoomCardData; faces?: Ava
         </span>
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-bold group-hover:text-accent-strong">{room.name}</h3>
+          {owner && (
+            <p className="truncate text-xs text-ink-soft">
+              作った人：{owner.display_name}
+              {owner.is_official && <OfficialBadge className="ml-1" />}
+            </p>
+          )}
           <div className="mt-1 flex flex-wrap gap-1">
             {room.tags.map((t) => (
               <Tag key={t}>{t}</Tag>

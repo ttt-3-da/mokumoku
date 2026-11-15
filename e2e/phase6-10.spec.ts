@@ -99,6 +99,7 @@ test("同じブラウザの別タブで別のユーザーにログインする�
   // 同じブラウザ（Cookie 共有）の別タブでログアウト → 別ユーザーで登録
   const second = await context.newPage();
   await second.goto("/lobby");
+  await second.getByRole("button", { name: "アカウントのメニュー" }).click();
   await second.getByRole("button", { name: "ログアウト" }).click();
   await expect(second).toHaveURL(/\/login/);
   await signUp(second, undefined, "ふたりめのもち");

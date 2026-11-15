@@ -23,6 +23,7 @@ test("新規登録 → ログアウト → ログインできる", async ({ page
   await expect(tour).toHaveCount(0);
   await page.reload();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "アカウントのメニュー" }).click();
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL(/\/login/);
 
@@ -43,6 +44,7 @@ test("同じユーザーIDでは登録できない", async ({ page }) => {
     if (attempt === 1) {
       await expect(page).toHaveURL(/\/lobby/);
       await skipTour(page);
+      await page.getByRole("button", { name: "アカウントのメニュー" }).click();
       await page.getByRole("button", { name: "ログアウト" }).click();
       await expect(page).toHaveURL(/\/login/);
     } else {

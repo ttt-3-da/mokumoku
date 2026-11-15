@@ -1,5 +1,5 @@
 import { useId, type CSSProperties, type SVGProps } from "react";
-import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type AvatarForm, type ColorDef } from "@/lib/avatar";
+import { COLORS, DEFAULT_AVATAR, seededRandom, type Avatar, type AvatarForm, type ColorDef, FORM_STACK, FORM_STACK_STEP } from "@/lib/avatar";
 import { EmoteMark } from "@/components/emote-marks";
 import type { EmoteId } from "@/lib/emotes";
 import { EXTRA_DESKS, EXTRA_HEADS, ExtraDesk, ExtraHead, NeckItem } from "./mochi-accessories";
@@ -146,6 +146,11 @@ export function Mochi({
         <g className="mochi-jump">
           <g className="mochi-pose">
             <g className="mochi-breathe">
+              {/* 2段・3段もちは、同じ大きさのもちを下に重ねる（顔は一番上のもち） */}
+              {Array.from({ length: FORM_STACK[form] }, (_, i) => (
+                <ellipse key={i} cx="50" cy={62 - i * FORM_STACK_STEP} rx="34" ry="28" fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
+              ))}
+              <g transform={FORM_STACK[form] > 0 ? `translate(0 ${-FORM_STACK[form] * FORM_STACK_STEP})` : undefined}>
               {/* 体 */}
               <BodyShape form={form} fill={bodyFill} stroke={color.edge} strokeWidth={STROKE} />
               {color.shine && (
@@ -228,6 +233,7 @@ export function Mochi({
                   <circle cx="86" cy="52" r="4.8" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
+              </g>
             </g>
           </g>
         </g>
@@ -450,21 +456,6 @@ function BodyShape({ form, ...paint }: { form: AvatarForm } & SVGProps<SVGEllips
   switch (form) {
     case "square":
       return <rect x="16" y="34" width="68" height="56" rx="16" {...(paint as SVGProps<SVGRectElement>)} />;
-    case "double":
-      return (
-        <>
-          <ellipse cx="50" cy="78" rx="35" ry="14" {...paint} />
-          <ellipse cx="50" cy="58" rx="28" ry="21" {...paint} />
-        </>
-      );
-    case "triple":
-      return (
-        <>
-          <ellipse cx="50" cy="85" rx="35" ry="9" {...paint} />
-          <ellipse cx="50" cy="74" rx="30" ry="11" {...paint} />
-          <ellipse cx="50" cy="57" rx="25" ry="19" {...paint} />
-        </>
-      );
     default:
       return <ellipse cx="50" cy="62" rx="34" ry="28" {...paint} />;
   }

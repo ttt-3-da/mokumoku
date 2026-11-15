@@ -289,6 +289,10 @@ export const FORMS = {
   triple: "3段もち",
   king: "キングもち",
 } as const;
+/** 2段・3段もちは同じ大きさのもちを下に積む。積む数と、1段ぶんの高さ（もちの大きさに対して 100 分の） */
+export const FORM_STACK = { round: 0, square: 0, double: 1, triple: 2, king: 0 } as const;
+export const FORM_STACK_STEP = 40;
+
 export type AvatarForm = keyof typeof FORMS;
 
 export type AvatarColor = keyof typeof COLORS;
@@ -322,6 +326,7 @@ export const DEFAULT_AVATAR: Avatar = {
   desk: "none",
   hachimaki: "red",
   neck: "none",
+  form: "round",
 };
 
 /** 解放制のアイテム（item_id → 解放条件の説明）。解放の判定はフェーズ12で実装する */

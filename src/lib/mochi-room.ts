@@ -71,7 +71,7 @@ export function ownsFurniture(id: FurnitureId, owned: ReadonlySet<string>): bool
  */
 export type Body = { x: number; y: number; vx: number; vy: number };
 
-export function stepBounce(b: Body, dt: number, w: number, h: number, size: number): Body & { hit: boolean } {
+export function stepBounce(b: Body, dt: number, w: number, h: number, size: number, top = 0): Body & { hit: boolean } {
   const g = 1800; // 重力（px/秒²）
   let { x, y, vx, vy } = b;
   vy += g * dt;
@@ -82,7 +82,7 @@ export function stepBounce(b: Body, dt: number, w: number, h: number, size: numb
   const maxY = Math.max(0, h - size);
   if (x < 0) [x, vx, hit] = [0, -vx * 0.75, true];
   if (x > maxX) [x, vx, hit] = [maxX, -vx * 0.75, true];
-  if (y < 0) [y, vy, hit] = [0, -vy * 0.75, true];
+  if (y < top) [y, vy, hit] = [top, -vy * 0.75, true];
   if (y > maxY) {
     y = maxY;
     if (Math.abs(vy) > 120) hit = true;

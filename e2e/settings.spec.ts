@@ -7,6 +7,7 @@ test("自己紹介を書いて検索で見つかる。非公開にすると見�
   const name = uniqueUsername("set");
 
   await signUp(a, name, "せっていもち");
+  await a.getByRole("button", { name: "アカウントのメニュー" }).click();
   await a.getByRole("link", { name: "設定" }).click();
   await a.getByLabel("自己紹介").fill("朝の1時間で資格の勉強をしています。");
   await a.getByRole("button", { name: "保存する" }).first().click();
@@ -37,6 +38,8 @@ test("パスワードを変えると、新しいパスワードでログイン�
   await page.getByLabel("新しいパスワード（確認）").fill("new-mochi-pass-456");
   await page.getByRole("button", { name: "変更する" }).click();
   await expect(page.getByRole("status").filter({ hasText: "パスワードを変更しました" })).toBeVisible();
+
+  await page.getByRole("button", { name: "アカウントのメニュー" }).click();
 
   await page.getByRole("button", { name: "ログアウト" }).click();
   await expect(page).toHaveURL(/\/login/);

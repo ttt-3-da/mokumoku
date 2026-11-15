@@ -6,34 +6,39 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { signOut } from "@/app/login/actions";
 
-function navLinks(username: string, isAdmin = false) {
+const MAIN_LINKS = [
+  { href: "/lobby", label: "ロビー", icon: "🏠" },
+  { href: "/timeline", label: "記録", icon: "📒" },
+  { href: "/follows", label: "フォロー", icon: "🤝" },
+  { href: "/users", label: "さがす", icon: "🔍" },
+  { href: "/shop", label: "ショップ", icon: "🛍️" },
+  { href: "/avatar", label: "着せかえ", icon: "👕" },
+  { href: "/mochi", label: "もちの部屋", icon: "🏡" },
+];
+
+/** パソコンでは右上の「🙂」の中に入れるもの */
+function accountLinks(username: string, isAdmin = false) {
   return [
-    { href: "/lobby", label: "ロビー", icon: "🏠" },
-    { href: "/timeline", label: "記録", icon: "📒" },
-    { href: "/follows", label: "フォロー", icon: "🤝" },
-    { href: "/users", label: "さがす", icon: "🔍" },
-    { href: "/shop", label: "ショップ", icon: "🛍️" },
-    { href: "/avatar", label: "着せかえ", icon: "👕" },
-    { href: "/mochi", label: "もちの部屋", icon: "🏡" },
     { href: `/u/${username}`, label: "プロフィール", icon: "🙂" },
     { href: "/settings", label: "設定", icon: "⚙️" },
     ...(isAdmin ? [{ href: "/admin", label: "管理", icon: "🛠️" }] : []),
   ];
 }
 
+function navLinks(username: string, isAdmin = false) {
+  return [...MAIN_LINKS, ...accountLinks(username, isAdmin)];
+}
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/** 広い画面ではヘッダーに横並び。スマホ（縦持ち）では MobileMenu を使う */
-export function NavLinks({ username, isAdmin = false }: { username: string; isAdmin?: boolean }) {
+/** 広い画面ではヘッダーに横並び。それより狭いときは MobileMenu を使う */
+export function NavLinks() {
   const pathname = usePathname();
   return (
-    <nav
-      aria-label="メニュー"
-      className="-mx-1 hidden min-w-0 gap-1 overflow-x-auto px-1 text-sm whitespace-nowrap [scrollbar-width:none] sm:flex"
-    >
-      {navLinks(username, isAdmin)
+    <nav aria-label="メニュー" className="hidden min-w-0 gap-0.5 text-sm whitespace-nowrap lg:flex">
+      {MAIN_LINKS
         .map((l) => {
           const active = isActive(pathname, l.href);
           return (
@@ -52,7 +57,76 @@ export function NavLinks({ username, isAdmin = false }: { username: string; isAd
   );
 }
 
-/** スマホ用：☰ を押すと左からメニューが出る */
+/** パソコン用：右上の「🙂」を押すと、プロフィール・設定などが出る */
+export function AccountMenu({ username, isAdmin = false }: { username: string; isAdmin?: boolean }) {
+  const pathname = usePathname();
+  const [open, setOpen] = useState(false);
+  const [lastPath, setLastPath] = useState(pathname);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const links = [...accountLinks(username, isAdmin), { href: "/feedback", label: "ご意見・不具合", icon: "✉️" }];
+  const here = links.some((l) => isActive(pathname, l.href));
+
+  return (
+    <div ref={boxRef} className="relative hidden shrink-0 lg:block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-label="アカウントのメニュー"
+        aria-expanded={open}
+        className={`flex items-center gap-1 rounded-full px-2.5 py-1.5 text-sm ${here || open ? "bg-paper shadow-sm" : "text-ink-soft hover:bg-paper"}`}
+      >
+        <span aria-hidden>🙂</span>
+        <span aria-hidden className="text-[10px]">▼</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-2 flex w-52 flex-col gap-0.5 rounded-2xl border border-line bg-paper p-2 shadow-lg">
+          {links.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+             
+              aria-current={isActive(pathname, l.href) ? "page" : undefined}
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-sm ${isActive(pathname, l.href) ? "bg-cream font-bold" : "hover:bg-cream"}`}
+            >
+              <span aria-hidden>{l.icon}</span>
+              {l.label}
+            </Link>
+          ))}
+          <form action={signOut} className="mt-1 border-t border-line pt-1">
+            <button type="submit" className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-ink-soft hover:bg-cream">
+              <span aria-hidden>🚪</span>
+              ログアウト
+            </button>
+          </form>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** スマホ・せまい画面用：☰ を押すと左からメニューが出る */
 export function MobileMenu({ username, isAdmin = false }: { username: string; isAdmin?: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
@@ -86,7 +160,7 @@ export function MobileMenu({ username, isAdmin = false }: { username: string; is
   }, [open]);
 
   return (
-    <div className="sm:hidden">
+    <div className="lg:hidden">
       <button
         ref={buttonRef}
         type="button"
@@ -107,7 +181,7 @@ export function MobileMenu({ username, isAdmin = false }: { username: string; is
       </button>
       {mounted &&
         createPortal(
-          <div className="sm:hidden">
+          <div className="lg:hidden">
             <div
               className={`fixed inset-0 z-40 bg-black/40 transition-opacity ${open ? "opacity-100" : "pointer-events-none opacity-0"}`}
               onClick={() => setOpen(false)}

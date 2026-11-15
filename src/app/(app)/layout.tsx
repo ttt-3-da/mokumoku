@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
-import { signOut } from "@/app/login/actions";
-import { MobileMenu, NavLinks } from "./nav-links";
+import { AccountMenu, MobileMenu, NavLinks } from "./nav-links";
 import { ReturnToRoom } from "./return-to-room";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
@@ -26,7 +25,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/lobby" className="text-lg font-bold tracking-wide">
             Mokumoku
           </Link>
-          <NavLinks username={profile.username} isAdmin={Boolean(profile.is_admin)} />
+          <NavLinks />
           <Link
             href="/shop"
             data-tour="coins"
@@ -47,11 +46,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
               </span>
             )}
           </Link>
-          <form action={signOut} className="hidden shrink-0 sm:block">
-            <button type="submit" className="text-sm text-ink-soft hover:text-ink">
-              ログアウト
-            </button>
-          </form>
+          <AccountMenu username={profile.username} isAdmin={Boolean(profile.is_admin)} />
         </div>
         <ReturnToRoom userId={profile.id} />
       </header>

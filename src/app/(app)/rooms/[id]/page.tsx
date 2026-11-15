@@ -7,7 +7,9 @@ import { TimerBadge } from "@/components/timer-badge";
 import { ReportButton } from "@/components/report-button";
 import { ButtonLink, Card, Tag } from "@/components/ui";
 import { createClient, requireProfile } from "@/lib/supabase/server";
-import type { RoomPreview } from "@/lib/types";
+import type { RoomOwner, RoomPreview } from "@/lib/types";
+import { OfficialBadge } from "@/components/official-badge";
+import Link from "next/link";
 import { EnterForm } from "./enter-form";
 import { PendingWatcher } from "./pending-watcher";
 
@@ -24,7 +26,7 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
   const me = await requireProfile();
   const supabase = await createClient();
 
-  const [previewRes, historyRes, openRes] = await Promise.all([
+  const [previewRes, historyRes, openRes, ownerRes] = await Promise.all([
     supabase.rpc("get_room_preview", { p_room_id: id, p_invite_code: inviteCode }),
     supabase
       .from("study_sessions")
@@ -33,7 +35,9 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
       .order("started_at", { ascending: false })
       .limit(50),
     supabase.from("study_sessions").select("room_id").eq("user_id", me.id).is("ended_at", null).maybeSingle(),
+    supabase.rpc("room_owners", { p_room_ids: [id] }),
   ]);
+  const owner = ((ownerRes.data ?? []) as RoomOwner[])[0];
 
   const preview = previewRes.data as RoomPreview | null;
   if (!preview) notFound();
@@ -54,6 +58,15 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-xl font-bold">{room.name}</h1>
+            {owner && (
+              <p className="mt-0.5 text-xs text-ink-soft">
+                作った人：
+                <Link href={`/u/${owner.username}`} className="font-bold text-ink hover:underline">
+                  {owner.display_name}
+                </Link>
+                {owner.is_official && <OfficialBadge className="ml-1" />}
+              </p>
+            )}
             <div className="mt-1 flex flex-wrap gap-1">
               {room.tags.map((t) => (
                 <Tag key={t}>{t}</Tag>

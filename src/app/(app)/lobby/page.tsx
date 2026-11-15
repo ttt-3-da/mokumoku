@@ -10,7 +10,7 @@ import type { FollowingActivity as FollowingActivityRow } from "@/lib/follow";
 import { ButtonLink, inputClass } from "@/components/ui";
 import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
 import { Tour } from "./tour";
-import type { RoomCard as RoomCardData } from "@/lib/types";
+import type { RoomCard as RoomCardData, RoomOwner } from "@/lib/types";
 
 export const metadata: Metadata = { title: "ロビー" };
 
@@ -51,7 +51,12 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const studyingNow = [...shown.values()].reduce((n, r) => n + r.active_count, 0);
   const busiest = publicRooms.filter((r) => r.active_count > 0 && r.active_count < r.capacity).sort((a, b) => b.active_count - a.active_count)[0];
   const busyIds = [...shown.values()].filter((r) => r.active_count > 0).map((r) => r.id);
-  const facesRes = busyIds.length > 0 ? await supabase.rpc("room_member_avatars", { p_room_ids: busyIds }) : { data: null };
+  const shownIds = [...shown.keys()];
+  const [facesRes, ownersRes] = await Promise.all([
+    busyIds.length > 0 ? supabase.rpc("room_member_avatars", { p_room_ids: busyIds }) : Promise.resolve({ data: null }),
+    shownIds.length > 0 ? supabase.rpc("room_owners", { p_room_ids: shownIds }) : Promise.resolve({ data: null }),
+  ]);
+  const owners = new Map<string, RoomOwner>(((ownersRes.data ?? []) as RoomOwner[]).map((o) => [o.room_id, o]));
   const faces = new Map<string, Avatar[]>(
     ((facesRes.data ?? []) as { room_id: string; avatars: unknown[] }[]).map((r) => [r.room_id, (r.avatars ?? []).map(parseAvatar)]),
   );
@@ -144,7 +149,7 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           <h2 id="my-rooms" className="mb-3 font-bold">
             参加したことのある部屋
           </h2>
-          <RoomGrid rooms={myRooms} faces={faces} />
+          <RoomGrid rooms={myRooms} faces={faces} owners={owners} />
         </section>
       )}
 
@@ -160,7 +165,7 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
             {filtering ? "条件に合う部屋はありません。" : "まだ部屋がありません。最初の部屋をつくってみませんか？"}
           </p>
         ) : (
-          <RoomGrid rooms={publicRooms} faces={faces} tourFirst />
+          <RoomGrid rooms={publicRooms} faces={faces} owners={owners} tourFirst />
         )}
       </section>
     </div>
@@ -175,12 +180,12 @@ function lobbyHref(q: string, tag: string) {
 }
 
 /** tourFirst：最初の部屋を使い方の案内で指す */
-function RoomGrid({ rooms, faces, tourFirst = false }: { rooms: RoomCardData[]; faces: Map<string, Avatar[]>; tourFirst?: boolean }) {
+function RoomGrid({ rooms, faces, owners, tourFirst = false }: { rooms: RoomCardData[]; faces: Map<string, Avatar[]>; owners: Map<string, RoomOwner>; tourFirst?: boolean }) {
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {rooms.map((r, i) => (
         <li key={r.id} data-tour={tourFirst && i === 0 ? "rooms" : undefined}>
-          <RoomCard room={r} faces={faces.get(r.id)} />
+          <RoomCard room={r} faces={faces.get(r.id)} owner={owners.get(r.id)} />
         </li>
       ))}
     </ul>

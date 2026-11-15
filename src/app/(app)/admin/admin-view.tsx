@@ -31,7 +31,21 @@ export type FeedbackRow = {
   display_name: string | null;
 };
 
-const TABS = { open: "通報（未対応）", done: "通報（対応済み）", feedback: "フィードバック" } as const;
+export type UserRow = {
+  id: string;
+  username: string;
+  display_name: string;
+  created_at: string;
+  is_admin: boolean;
+  is_public: boolean;
+  suspended_at: string | null;
+  last_country: string | null;
+  last_seen_at: string | null;
+  total_minutes: number;
+  rooms_owned: number;
+};
+
+const TABS = { open: "通報（未対応）", done: "通報（対応済み）", feedback: "フィードバック", users: "ユーザー" } as const;
 type Tab = keyof typeof TABS;
 
 const TARGET_LABEL = { room: "部屋", user: "ユーザー", post: "投稿" } as const;
@@ -41,10 +55,20 @@ function when(iso: string) {
 }
 
 /** 管理の画面：通報の一覧と対応、フィードバックを読む */
-export function AdminView({ openReports, doneReports, feedback }: { openReports: ReportRow[]; doneReports: ReportRow[]; feedback: FeedbackRow[] }) {
+export function AdminView({
+  openReports,
+  doneReports,
+  feedback,
+  users,
+}: {
+  openReports: ReportRow[];
+  doneReports: ReportRow[];
+  feedback: FeedbackRow[];
+  users: UserRow[];
+}) {
   const [tab, setTab] = useState<Tab>("open");
   const unread = feedback.filter((f) => !f.read_at).length;
-  const counts: Record<Tab, number> = { open: openReports.length, done: doneReports.length, feedback: unread };
+  const counts: Record<Tab, number> = { open: openReports.length, done: doneReports.length, feedback: unread, users: 0 };
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,7 +89,9 @@ export function AdminView({ openReports, doneReports, feedback }: { openReports:
         ))}
       </div>
 
-      {tab === "feedback" ? (
+      {tab === "users" ? (
+        <UserList items={users} />
+      ) : tab === "feedback" ? (
         <FeedbackList items={feedback} />
       ) : (
         <ReportList items={tab === "open" ? openReports : doneReports} resolved={tab === "done"} />
@@ -166,5 +192,60 @@ function FeedbackList({ items }: { items: FeedbackRow[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+function minutesText(m: number) {
+  const h = Math.floor(m / 60);
+  return h > 0 ? `${h}時間${m % 60}分` : `${m}分`;
+}
+
+/** 登録しているユーザー全員（新しい順）。名前・ユーザーIDでしぼりこめる */
+function UserList({ items }: { items: UserRow[] }) {
+  const [q, setQ] = useState("");
+  const query = q.trim().toLowerCase();
+  const shown = query ? items.filter((u) => u.username.includes(query) || u.display_name.toLowerCase().includes(query)) : items;
+  const suspended = items.filter((u) => u.suspended_at).length;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="text-sm">
+          登録しているユーザー <b className="tabular-nums">{items.length}</b> 人
+          {suspended > 0 && <span className="ml-2 text-ink-soft">（利用停止 {suspended} 人）</span>}
+        </p>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="名前・ユーザーIDでさがす"
+          aria-label="ユーザーをさがす"
+          className="ml-auto w-full rounded-full border border-line bg-paper px-4 py-1.5 text-sm sm:w-64"
+        />
+      </div>
+      {shown.length === 0 ? (
+        <p className="text-sm text-ink-soft">見つかりませんでした。</p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line overflow-hidden rounded-3xl border border-line bg-paper">
+          {shown.map((u) => (
+            <li key={u.id}>
+              <Link href={`/u/${u.username}`} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 text-sm hover:bg-cream">
+                <span className="font-bold">{u.display_name || "（名前なし）"}</span>
+                <span className="text-ink-soft">@{u.username}</span>
+                {u.is_admin && <span className="rounded-full bg-accent/15 px-2 text-xs text-accent-strong">管理者</span>}
+                {u.suspended_at && <span className="rounded-full bg-red-100 px-2 text-xs text-red-700">利用停止</span>}
+                {!u.is_public && <span className="rounded-full bg-cream px-2 text-xs text-ink-soft">非公開</span>}
+                <span className="ml-auto flex flex-wrap gap-x-3 text-xs text-ink-soft tabular-nums">
+                  <span>勉強 {minutesText(u.total_minutes)}</span>
+                  <span>部屋 {u.rooms_owned}</span>
+                  <span>国 {u.last_country ?? "—"}</span>
+                  <span>登録 {when(u.created_at)}</span>
+                  <span>最後 {u.last_seen_at ? when(u.last_seen_at) : "—"}</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

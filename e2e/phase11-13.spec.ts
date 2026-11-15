@@ -43,6 +43,7 @@ test("オーナーがキックすると、相手は記録画面へ移動する�
 
   // プロフィールに統計が出る
   await owner.goto(`/lobby`);
+  await owner.getByRole("button", { name: "アカウントのメニュー" }).click();
   await owner.getByRole("link", { name: "プロフィール" }).click();
   await expect(owner.getByRole("heading", { name: "今週の学習時間" })).toBeVisible();
   await expect(owner.getByRole("heading", { name: "草カレンダー" })).toBeVisible();
