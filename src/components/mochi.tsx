@@ -478,7 +478,7 @@ function BodyShape({ form, copy, ...paint }: { form: AvatarForm; copy?: number }
 }
 
 /** 体の塗り分け。bands は上から等分の色の帯、gradient はなめらかなグラデーション */
-function BodyPaint({ id, paint }: { id: string; paint: NonNullable<ColorDef["paint"]> }) {
+export function BodyPaint({ id, paint }: { id: string; paint: NonNullable<ColorDef["paint"]> }) {
   const n = paint.stops.length;
   return (
     <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">

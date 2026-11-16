@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
+import { BodyPaint } from "@/components/mochi";
 import { COLORS, DEFAULT_AVATAR, type Avatar } from "@/lib/avatar";
 import type { StampId } from "@/lib/stamps";
 
@@ -375,12 +376,19 @@ export function StampArt({ id, avatar = DEFAULT_AVATAR, size = 40, className = "
   const rx = pose.body?.rx ?? 32;
   const ry = pose.body?.ry ?? 26;
   const hand = (x: number, y: number, r = 4.8) => <circle key={`${x}-${y}`} cx={x} cy={y} r={r} fill={color.fill} stroke={color.edge} strokeWidth={SW} />;
-  const fill = color.paint ? color.paint.stops[0] : color.fill;
+  // 色が上下に分かれている・グラデーションの体は、もちと同じように塗り分ける
+  const paintId = `stamp-paint-${useId().replace(/:/g, "")}`;
+  const fill = color.paint ? `url(#${paintId})` : color.fill;
   // 顔の位置は体の中心に合わせて上下させる
   const faceDy = cy - 64;
 
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} className={className} aria-hidden overflow="visible">
+      {color.paint && (
+        <defs>
+          <BodyPaint id={paintId} paint={color.paint} />
+        </defs>
+      )}
       {pose.back}
       <ellipse cx="50" cy={cy} rx={rx} ry={ry} fill={fill} stroke={color.edge} strokeWidth={SW} />
       <g transform={`translate(0 ${faceDy})`}>
