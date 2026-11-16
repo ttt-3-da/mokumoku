@@ -4,6 +4,7 @@ import { parseShopItem } from "@/lib/avatar";
 import { getEmote } from "@/lib/emotes";
 import { getStamp } from "@/lib/stamps";
 import { BADGES, isBadgeId } from "@/lib/badges";
+import { formatCoins } from "@/lib/shop";
 import { createClient, getWallet } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "コイン" };
@@ -54,7 +55,7 @@ export default async function CoinsPage() {
     <div className="mx-auto flex max-w-xl flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">コイン</h1>
-        <span className="rounded-full bg-paper px-3 py-1 text-lg font-bold tabular-nums shadow-sm">🪙 {wallet.coins}</span>
+        <span className="rounded-full bg-paper px-3 py-1 text-lg font-bold tabular-nums shadow-sm">🪙 {formatCoins(wallet.coins)}</span>
         <ButtonLink href="/shop" variant="secondary" className="ml-auto">
           ショップへ
         </ButtonLink>

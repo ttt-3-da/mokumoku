@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { COLORS } from "./avatar";
-import { coinsShort, parseShopSort, sortShopItems } from "./shop";
+import { coinsShort, formatCoins, parseShopSort, sortShopItems } from "./shop";
+
+describe("formatCoins", () => {
+  it("管理者の無限のコインは ∞、ふつうは数", () => {
+    expect(formatCoins(1_000_000_000)).toBe("∞");
+    expect(formatCoins(999_999_500)).toBe("∞");
+    expect(formatCoins(120)).toBe("120");
+  });
+});
 
 const items = [
   { item_id: "color:a", price: 50, sort_order: 2, released_at: "2026-11-01T00:00:00Z" },

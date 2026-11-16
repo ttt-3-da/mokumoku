@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { headers } from "next/headers";
+import { formatCoins } from "@/lib/shop";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { AccountMenu, MobileMenu, NavLinks } from "./nav-links";
 import { ReturnToRoom } from "./return-to-room";
@@ -30,9 +31,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
             href="/shop"
             data-tour="coins"
             className="ml-auto shrink-0 rounded-full bg-paper px-2.5 py-1 text-sm font-bold tabular-nums shadow-sm hover:bg-sakura/20"
-            aria-label={`所持コイン ${wallet.coins}枚（ショップへ）`}
+            aria-label={`所持コイン ${formatCoins(wallet.coins)}枚（ショップへ）`}
           >
-            🪙 {wallet.coins}
+            🪙 {formatCoins(wallet.coins)}
           </Link>
           <Link
             href="/notifications"

@@ -33,6 +33,16 @@ export function coinsShort(balance: number, price: number): number {
   return Math.max(0, price - balance);
 }
 
+/** 管理者のコインは無限（DB はとても大きな数を返す）。買ったあとの残高も無限のまま */
+export function isUnlimitedCoins(balance: number): boolean {
+  return balance >= 900_000_000;
+}
+
+/** 所持コインの表示（管理者は ∞） */
+export function formatCoins(balance: number): string {
+  return isUnlimitedCoins(balance) ? "∞" : String(balance);
+}
+
 /** ショップの種類のタブ */
 export const SHOP_KINDS = ["color", "eyes", "mouth", "cheeks", "head", "neck", "desk", "form", "stamp", "emote", "wallpaper", "furniture"] as const;
 export type ShopKind = (typeof SHOP_KINDS)[number];

@@ -12,7 +12,7 @@ import { Button, Card } from "@/components/ui";
 import { FORMS, parseShopItem, type Avatar, type AvatarForm, type ShopPart } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { EMOTES, getEmote, type EmoteId } from "@/lib/emotes";
-import { coinsShort, parseShopSort, SHOP_SORTS, sortShopItems, type ShopKind, type ShopSort } from "@/lib/shop";
+import { coinsShort, formatCoins, parseShopSort, SHOP_SORTS, sortShopItems, type ShopKind, type ShopSort } from "@/lib/shop";
 import { getStamp, STAMPS, type StampId } from "@/lib/stamps";
 import { playSound, useMuted } from "@/lib/sound";
 import { createClient } from "@/lib/supabase/client";
@@ -200,8 +200,8 @@ export function ShopView({
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-bold">ショップ</h1>
-        <span className="rounded-full bg-paper px-3 py-1 text-sm font-bold tabular-nums shadow-sm" aria-label={`所持コイン ${wallet.coins}枚`}>
-          🪙 {wallet.coins}
+        <span className="rounded-full bg-paper px-3 py-1 text-sm font-bold tabular-nums shadow-sm" aria-label={`所持コイン ${formatCoins(wallet.coins)}枚`}>
+          🪙 {formatCoins(wallet.coins)}
         </span>
         <Link href="/coins" className="text-sm text-ink-soft hover:underline">
           コインの履歴・もらい方
