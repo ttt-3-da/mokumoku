@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { LegalLinks } from "@/components/legal-page";
 import { Mochi } from "@/components/mochi";
 import { AuthForm } from "./auth-form";
 
@@ -20,6 +21,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           </p>
         )}
         <AuthForm next={typeof next === "string" ? next : ""} />
+        <LegalLinks className="mt-8" />
       </div>
     </main>
   );

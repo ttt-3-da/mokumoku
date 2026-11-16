@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { formatCoins } from "@/lib/shop";
+import { LegalLinks } from "@/components/legal-page";
 import { createClient, getWallet, requireProfile } from "@/lib/supabase/server";
 import { AccountMenu, MobileMenu, NavLinks } from "./nav-links";
 import { ReturnToRoom } from "./return-to-room";
@@ -52,6 +53,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <ReturnToRoom userId={profile.id} />
       </header>
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">{children}</main>
+      <footer className="pb-6">
+        <LegalLinks />
+      </footer>
     </>
   );
 }

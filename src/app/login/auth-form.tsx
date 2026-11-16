@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { signIn, signUp, type AuthState } from "./actions";
 import { Button, Field, inputClass } from "@/components/ui";
 
@@ -104,6 +105,17 @@ function SignUpForm() {
       </Field>
       <p className="text-xs leading-relaxed text-ink-soft">
         メールアドレスは使いません。そのぶん、パスワードを忘れると再設定できないので大切に保管してください。
+      </p>
+      <p className="text-xs leading-relaxed text-ink-soft">
+        「はじめる」を押すと、
+        <Link href="/terms" target="_blank" className="underline">
+          利用規約
+        </Link>
+        と
+        <Link href="/privacy" target="_blank" className="underline">
+          プライバシーポリシー
+        </Link>
+        に同意したことになります。
       </p>
       {state.error && <ErrorText>{state.error}</ErrorText>}
       <Button type="submit" disabled={pending}>
