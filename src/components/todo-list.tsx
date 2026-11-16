@@ -2,11 +2,10 @@
 
 import { Klee_One } from "next/font/google";
 import Link from "next/link";
-import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { inputClass } from "@/components/ui";
+import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/client";
-import { groupDoneByDay, jstDay, TODO_MAX_LENGTH, type Todo } from "@/lib/todo";
+import { jstDay, TODO_MAX_LENGTH, type Todo } from "@/lib/todo";
 
 // 鉛筆で書いたような字（ToDo の紙の中だけ）
 const pencilFont = Klee_One({
@@ -24,22 +23,29 @@ const dayLabel = new Intl.DateTimeFormat("ja-JP", {
 });
 
 /**
- * ToDoリスト。やることを書いておき、終わったらチェックする。チェックしたものは「これまでの記録」にずっと残る。
- * compact は自習室の中で使う小さい版（まだのものと、今日終わったものだけ）
+ * ToDoリスト。1枚の長い紙に、やることを上から順に書きたしていく。
+ * 終わったものはその場で鉛筆の線で消し、紙にずっと残る。日がかわると、その日の日付を書く。
+ * compact は自習室の中で使う小さい版（まだのものと、ここ2日に終わったもの）
  */
 export function TodoList({ initial, compact = false }: { initial: Todo[]; compact?: boolean }) {
   const [todos, setTodos] = useState(initial);
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  // いまチェックしたものだけ、線を引くところを見せる（読みこんだときの記録は最初から線が引いてある）
+  // いまチェックしたものだけ、線を引くところを見せる（読みこんだときは最初から線が引いてある）
   const [justChecked, setJustChecked] = useState<Set<string>>(new Set());
+  const sheetRef = useRef<HTMLDivElement>(null);
 
   const today = jstDay(new Date().toISOString());
-  const open = useMemo(() => todos.filter((t) => !t.done_at).sort((a, b) => (a.created_at < b.created_at ? -1 : 1)), [todos]);
-  const groups = useMemo(() => groupDoneByDay(todos), [todos]);
-  const doneToday = groups.find((g) => g.day === today)?.items ?? [];
-  const totalDone = todos.length - open.length;
+  const sorted = useMemo(() => [...todos].sort((a, b) => (a.created_at < b.created_at ? -1 : 1)), [todos]);
+  const openCount = todos.filter((t) => !t.done_at).length;
+  const doneCount = todos.length - openCount;
+
+  // 紙のいちばん下（新しく書くところ）を見せる
+  useEffect(() => {
+    const el = sheetRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [todos.length]);
 
   function add(e: FormEvent) {
     e.preventDefault();
@@ -83,77 +89,70 @@ export function TodoList({ initial, compact = false }: { initial: Todo[]; compac
     });
   }
 
+  // 日がかわるところに日付の行をはさむ
+  const rows: ({ kind: "day"; day: string } | { kind: "todo"; todo: Todo })[] = [];
+  let lastDay = "";
+  for (const t of sorted) {
+    const d = jstDay(t.created_at);
+    if (d !== lastDay) {
+      rows.push({ kind: "day", day: d });
+      lastDay = d;
+    }
+    rows.push({ kind: "todo", todo: t });
+  }
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <PencilGrain />
-      <form onSubmit={add} className="flex gap-2">
-        <label htmlFor={compact ? "todo-new-room" : "todo-new"} className="sr-only">
-          やることを追加
-        </label>
-        <input
-          id={compact ? "todo-new-room" : "todo-new"}
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          maxLength={TODO_MAX_LENGTH}
-          placeholder="例：英単語を30個おぼえる"
-          className={`${inputClass} ${compact ? "py-1.5 text-sm" : ""}`}
-        />
-        <button
-          type="submit"
-          disabled={pending || !title.trim()}
-          className="shrink-0 rounded-full bg-accent px-4 text-sm font-bold text-white hover:bg-accent-strong disabled:opacity-50"
-        >
-          追加
-        </button>
-      </form>
+      <p className="text-xs text-ink-soft">
+        まだ {openCount}個・終わったこと {doneCount}個
+        {compact && (
+          <Link href="/todo" className="ml-2 underline">
+            紙をぜんぶ見る
+          </Link>
+        )}
+      </p>
+      <div
+        ref={sheetRef}
+        role="region"
+        aria-label="ToDoの紙"
+        className={`todo-sheet overflow-y-auto rounded-md pt-8 ${compact ? "max-h-72" : "max-h-[70vh] min-h-64"} ${pencilFont.className}`}
+      >
+        <ul>
+          {rows.map((r) =>
+            r.kind === "day" ? (
+              <li key={`d-${r.day}`} className="pl-[2.6rem] text-xs leading-8 font-semibold opacity-70">
+                {r.day === today ? "今日" : dayLabel.format(new Date(`${r.day}T12:00:00+09:00`))}
+              </li>
+            ) : (
+              <TodoRow key={r.todo.id} todo={r.todo} onToggle={toggle} onRemove={r.todo.done_at ? undefined : remove} animate={justChecked.has(r.todo.id)} />
+            ),
+          )}
+        </ul>
+        {/* 紙のいちばん下の行に、そのまま書きたす */}
+        <form onSubmit={add} className="flex min-h-8 items-center gap-2 pr-2 pl-2.5 leading-8">
+          <span className="h-4 w-4 shrink-0 rounded-[3px] border-[1.5px] border-dashed border-[var(--graphite)] opacity-40" aria-hidden />
+          <label htmlFor={compact ? "todo-new-room" : "todo-new"} className="sr-only">
+            やることを追加
+          </label>
+          <input
+            id={compact ? "todo-new-room" : "todo-new"}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={TODO_MAX_LENGTH}
+            placeholder={todos.length === 0 ? "ここにやることを書く（例：英単語を30個おぼえる）" : "つづきを書く…"}
+            className="ml-3 h-8 min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[var(--graphite)] placeholder:opacity-40"
+          />
+          <button type="submit" disabled={pending || !title.trim()} className="shrink-0 rounded-full px-2 text-sm font-semibold opacity-70 hover:bg-sakura/30 hover:opacity-100 disabled:opacity-0">
+            追加
+          </button>
+        </form>
+        <div className="h-8" aria-hidden />
+      </div>
       {error && (
         <p role="alert" className="text-sm text-red-600">
           {error}
         </p>
-      )}
-
-      <section aria-label="やること" className="flex flex-col gap-1.5">
-        {!compact && <h2 className="font-bold">やること（{open.length}）</h2>}
-        {open.length === 0 ? (
-          <p className="text-sm text-ink-soft">{totalDone > 0 ? "ぜんぶ終わりました！🎉" : "やることを書いておくと、終わったときにチェックできます。"}</p>
-        ) : (
-          <ul className={`todo-sheet rounded-md ${pencilFont.className}`}>
-            {open.map((t) => (
-              <TodoRow key={t.id} todo={t} onToggle={toggle} onRemove={remove} animate={false} />
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {compact ? (
-        <p className="text-xs text-ink-soft">
-          今日終わったこと：{doneToday.length}個
-          <Link href="/todo" className="ml-2 underline">
-            これまでの記録
-          </Link>
-        </p>
-      ) : (
-        <section aria-label="これまでの記録" className="flex flex-col gap-3">
-          <h2 className="font-bold">
-            これまでの記録 <span className="text-sm font-normal text-ink-soft">（終わったこと {totalDone}個）</span>
-          </h2>
-          {groups.length === 0 ? (
-            <p className="text-sm text-ink-soft">終わったことは、ここに日ごとにずっと残ります。</p>
-          ) : (
-            groups.map((g) => (
-              <div key={g.day}>
-                <h3 className="mb-1 text-sm font-bold text-ink-soft">
-                  {g.day === today ? "今日" : dayLabel.format(new Date(`${g.day}T12:00:00+09:00`))}（{g.items.length}個）
-                </h3>
-                <ul className={`todo-sheet rounded-md ${pencilFont.className}`}>
-                  {g.items.map((t) => (
-                    <TodoRow key={t.id} todo={t} onToggle={toggle} animate={justChecked.has(t.id)} />
-                  ))}
-                </ul>
-              </div>
-            ))
-          )}
-        </section>
       )}
     </div>
   );

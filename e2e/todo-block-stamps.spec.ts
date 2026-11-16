@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { signUp, uniqueUsername } from "./helpers";
 
-test("ToDo：追加してチェックすると、これまでの記録に残る", async ({ page }) => {
+test("ToDo：1枚の紙に書きたしていき、チェックしたものも紙に残る", async ({ page }) => {
   await signUp(page, undefined, "やることもち");
   await page.goto("/todo");
   await page.getByLabel("やることを追加").fill("英単語を30個");
@@ -10,14 +10,15 @@ test("ToDo：追加してチェックすると、これまでの記録に残る"
   await page.getByRole("button", { name: "追加" }).click();
   await page.getByRole("checkbox", { name: "英単語を30個" }).check();
 
-  const history = page.getByRole("region", { name: "これまでの記録" });
-  await expect(history.getByText("今日（1個）")).toBeVisible();
-  await expect(history.getByText("英単語を30個")).toBeVisible();
+  // 1枚の紙に、終わったものも線を引いたまま残る
+  const sheet = page.getByRole("region", { name: "ToDoの紙" });
+  await expect(sheet.getByText("今日")).toBeVisible();
+  await expect(page.getByText("まだ 1個・終わったこと 1個")).toBeVisible();
 
   // 読みこみ直しても残っている
   await page.reload();
-  await expect(page.getByRole("region", { name: "これまでの記録" }).getByText("英単語を30個")).toBeVisible();
-  await expect(page.getByRole("region", { name: "やること" }).getByText("数学の宿題")).toBeVisible();
+  await expect(page.getByRole("checkbox", { name: "英単語を30個（終わった）" })).toBeChecked();
+  await expect(page.getByRole("checkbox", { name: "数学の宿題" })).not.toBeChecked();
 });
 
 test("遊びに行った部屋にスタンプを置くとお知らせが届き、ブロックすると部屋に行けなくなる", async ({ browser }) => {

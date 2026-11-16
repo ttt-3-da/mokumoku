@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { TodoList } from "@/components/todo-list";
-import { Card } from "@/components/ui";
 import { createClient, requireProfile } from "@/lib/supabase/server";
 import type { Todo } from "@/lib/todo";
 
@@ -15,11 +14,9 @@ export default async function TodoPage() {
     <div className="mx-auto flex max-w-xl flex-col gap-4">
       <div>
         <h1 className="text-2xl font-bold">ToDo</h1>
-        <p className="mt-1 text-xs text-ink-soft">やることを書いておいて、終わったらチェック。終わったことは「これまでの記録」にずっと残ります。自習室の中からもチェックできます。</p>
+        <p className="mt-1 text-xs text-ink-soft">長い紙に、やることをどんどん書きたしていこう。終わったら鉛筆で線を引いて、紙にずっと残ります。自習室の中からも書けます。</p>
       </div>
-      <Card>
-        <TodoList initial={(data ?? []) as Todo[]} />
-      </Card>
+      <TodoList initial={(data ?? []) as Todo[]} />
     </div>
   );
 }
