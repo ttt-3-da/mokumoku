@@ -24,7 +24,7 @@ export type LeaderRow = { username: string; display_name: string; avatar: Avatar
 /** list_notifications の1行 */
 export type NotificationRow = {
   id: string;
-  kind: "follow" | "badge" | "schedule" | "mochi_stamp";
+  kind: "follow" | "badge" | "schedule" | "mochi_stamp" | "post_reaction";
   created_at: string;
   read_at: string | null;
   /** フォロー・もちの部屋のスタンプのお知らせだけ入る */

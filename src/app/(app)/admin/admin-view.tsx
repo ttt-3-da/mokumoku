@@ -144,6 +144,9 @@ function reportActions(r: ReportRow, resolved: boolean) {
     list.push({ label: "名前と説明を消す", confirm: "この部屋の名前と説明を消しますか？", rpc: "admin_clear_room_text", args: { p_room_id: r.target_id } });
     list.push({ label: "部屋を削除", confirm: "この部屋を削除しますか？在室中の人は退室になり、元に戻せません。", rpc: "admin_delete_room", args: { p_room_id: r.target_id }, danger: true });
   }
+  if (r.target_type === "post") {
+    list.push({ label: "投稿を消す", confirm: "この投稿を消しますか？元に戻せません。", rpc: "delete_post", args: { p_post_id: r.target_id }, danger: true });
+  }
   if (r.target_type === "user") {
     list.push({ label: "名前と自己紹介を消す", confirm: "このユーザーの表示名と自己紹介を消しますか？", rpc: "admin_clear_user_text", args: { p_user_id: r.target_id } });
     list.push({ label: "利用停止", confirm: "このユーザーを利用停止にしますか？（あとで解除できます）", rpc: "admin_set_suspended", args: { p_user_id: r.target_id, p_suspended: true }, danger: true });

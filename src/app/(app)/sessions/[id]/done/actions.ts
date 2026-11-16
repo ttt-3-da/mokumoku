@@ -19,3 +19,18 @@ export async function saveNote(sessionId: string, _prev: NoteState, formData: Fo
 
   redirect("/timeline");
 }
+
+export type PostState = { error?: string };
+
+/** 退室した記録を、みんなのタイムラインに投稿する（ひとことは任意） */
+export async function createPost(sessionId: string, _prev: PostState, formData: FormData): Promise<PostState> {
+  await requireProfile();
+  const body = String(formData.get("body") ?? "").trim();
+  if ([...body].length > 280) return { error: "ひとことは280文字までです" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_post", { p_session_id: sessionId, p_body: body });
+  if (error) return { error: rpcErrorMessage(error) };
+
+  redirect("/feed");
+}

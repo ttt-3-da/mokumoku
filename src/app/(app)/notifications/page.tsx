@@ -6,6 +6,8 @@ import { parseAvatar } from "@/lib/avatar";
 import { BADGES, isBadgeId } from "@/lib/badges";
 import type { NotificationRow } from "@/lib/follow";
 import { createClient } from "@/lib/supabase/server";
+import { StampArt } from "@/components/stamp-art";
+import { isPostStamp, postStampLabel } from "@/lib/posts";
 import { MarkRead } from "./mark-read";
 
 export const metadata: Metadata = { title: "お知らせ" };
@@ -89,6 +91,28 @@ function NotificationBody({ n }: { n: NotificationRow }) {
     );
   }
   if (!n.actor_username || !n.actor_avatar) return null;
+  if (n.kind === "post_reaction") {
+    const stamp = n.detail?.split(":")[1];
+    return (
+      <>
+        <Link href={`/u/${n.actor_username}`} className="shrink-0">
+          <Mochi avatar={n.actor_avatar} size={44} seed={n.actor_username} />
+        </Link>
+        <p className="min-w-0 flex-1 text-sm">
+          <Link href={`/u/${n.actor_username}`} className="font-bold hover:underline">
+            {n.actor_display_name}
+          </Link>{" "}
+          さんが
+          <Link href="/feed" className="font-bold hover:underline">
+            あなたの記録
+          </Link>
+          に{isPostStamp(stamp) ? `「${postStampLabel(stamp)}」` : "スタンプ"}を送りました
+          <When n={n} />
+        </p>
+        {isPostStamp(stamp) && <StampArt id={stamp} avatar={n.actor_avatar} size={36} className="shrink-0" />}
+      </>
+    );
+  }
   if (n.kind === "mochi_stamp") {
     return (
       <>

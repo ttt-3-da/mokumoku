@@ -9,6 +9,7 @@ import { formatMinutes } from "@/lib/pomodoro";
 import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
 import type { StudySession } from "@/lib/types";
 import { NoteForm } from "./note-form";
+import { PostForm } from "./post-form";
 
 export const metadata: Metadata = { title: "おつかれさま" };
 
@@ -36,12 +37,13 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
   const session = data as StudySession;
   if (!session.ended_at) redirect(`/rooms/${session.room_id}/live`);
 
-  const [{ data: room }, avatar, { data: unlockRows }, { data: coinRows }, { data: badgeRows }] = await Promise.all([
+  const [{ data: room }, avatar, { data: unlockRows }, { data: coinRows }, { data: badgeRows }, { data: postRow }] = await Promise.all([
     supabase.from("rooms").select("name, icon, timer_mode").eq("id", session.room_id).maybeSingle(),
     getAvatar(me.id),
     supabase.from("unlocks").select("item_id").eq("user_id", me.id).eq("session_id", session.id),
     supabase.from("coin_transactions").select("amount, reason, detail").eq("session_id", session.id),
     supabase.from("user_badges").select("badge_id").eq("user_id", me.id).eq("session_id", session.id),
+    supabase.from("posts").select("id").eq("session_id", session.id).maybeSingle(),
   ]);
   const newBadges = (badgeRows ?? []).map((r) => r.badge_id as string).filter(isBadgeId);
   const coins = (coinRows ?? []) as { amount: number; reason: string; detail: string | null }[];
@@ -155,6 +157,11 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
         <Card className="w-full">
           <p className="mb-3 text-center text-xs text-ink-soft">✅ この勉強は「記録」に残りました</p>
           <NoteForm sessionId={session.id} initial={session.note ?? ""} />
+        </Card>
+      ) : null}
+      {minutes >= 1 ? (
+        <Card className="w-full">
+          <PostForm sessionId={session.id} posted={Boolean(postRow)} isPublic={me.is_public} />
         </Card>
       ) : (
         <Card className="w-full text-center text-sm text-ink-soft">

@@ -50,6 +50,12 @@ const MESSAGES: Record<string, string> = {
   profile_private: "プロフィールを公開すると、スタンプを置けます",
   invalid_stamp: "そのスタンプは使えません",
   too_fast: "少し時間をおいてから、もう一度どうぞ",
+  post_private: "プロフィールを公開すると、記録を投稿できます",
+  ng_word_post: "ひとことに使えない言葉が含まれています",
+  invalid_body: "ひとことは280文字までです",
+  too_short: "1分未満の勉強は投稿できません",
+  already_posted: "この記録はもう投稿しています",
+  post_not_found: "投稿が見つかりません（消されたか、見られなくなりました）",
 };
 
 export function rpcErrorMessage(error: { message?: string } | null | undefined): string {
