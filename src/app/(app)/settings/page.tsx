@@ -1,13 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BlockButton } from "@/components/block-button";
+import { InstallApp } from "@/components/install-app";
+import { Mochi } from "@/components/mochi";
 import { Card } from "@/components/ui";
-import { requireProfile } from "@/lib/supabase/server";
+import { parseAvatar } from "@/lib/avatar";
+import { createClient, requireProfile } from "@/lib/supabase/server";
 import { ColorSchemeForm, DeleteAccountForm, GoalForm, PasswordForm, ProfileForm, VisibilityForm } from "./forms";
 
 export const metadata: Metadata = { title: "設定" };
 
 export default async function SettingsPage() {
   const me = await requireProfile();
+  const { data: blockData } = await (await createClient()).rpc("list_blocks");
+  const blocks = (blockData ?? []) as { username: string; display_name: string; avatar: unknown }[];
 
   return (
     <div className="mx-auto flex max-w-xl flex-col gap-5">
@@ -34,6 +40,12 @@ export default async function SettingsPage() {
       </Card>
 
       <Card>
+        <h2 className="mb-1 font-bold">ホーム画面に追加</h2>
+        <p className="mb-3 text-xs text-ink-soft">スマホのホーム画面にアプリのように置いて、すぐ開けます。</p>
+        <InstallApp />
+      </Card>
+
+      <Card>
         <h2 className="mb-1 font-bold">週の目標</h2>
         <p className="mb-3 text-xs text-ink-soft">ロビーとプロフィールに今週の進み具合が出ます（プロフィールでは統計を見せる設定のときだけ）。</p>
         <GoalForm goalMinutes={me.weekly_goal_minutes} />
@@ -49,6 +61,26 @@ export default async function SettingsPage() {
         <h2 className="mb-1 font-bold">公開範囲</h2>
         <p className="mb-3 text-xs text-ink-soft">部屋の中でのもち・名前・今やることは、設定にかかわらず同じ部屋の人に見えます。</p>
         <VisibilityForm isPublic={me.is_public} statsPublic={me.stats_public} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-bold">ブロックしている人</h2>
+        <p className="mb-3 text-xs text-ink-soft">ブロックは、その人のプロフィールの「🚫 ブロック」からできます。</p>
+        {blocks.length === 0 ? (
+          <p className="text-sm text-ink-soft">いません。</p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {blocks.map((b) => (
+              <li key={b.username} className="flex items-center gap-3">
+                <Mochi avatar={parseAvatar(b.avatar)} size={36} seed={b.username} />
+                <span className="min-w-0 flex-1 truncate text-sm">
+                  {b.display_name} <span className="text-ink-soft">@{b.username}</span>
+                </span>
+                <BlockButton username={b.username} displayName={b.display_name} initialBlocking />
+              </li>
+            ))}
+          </ul>
+        )}
       </Card>
 
       <Card>

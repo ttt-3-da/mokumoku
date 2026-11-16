@@ -1,5 +1,7 @@
 "use client";
 
+import { TodoList } from "@/components/todo-list";
+import type { Todo } from "@/lib/todo";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button, inputClass } from "@/components/ui";
@@ -61,6 +63,10 @@ type Props = {
   /** 買った品物（スタンプ・エモートを使えるか） */
   owned: string[];
   isStaff: boolean;
+  /** ブロックしている・されている人。おたがいのもちとスタンプを出さない */
+  blocked: string[];
+  /** ToDo（まだのものと、ここ2日に終わったもの） */
+  todos: Todo[];
 };
 
 type Flight = { id: string; stamp: StampId; from: string; x: number; y: number; dx: number; dy: number; peak: number };
@@ -69,7 +75,8 @@ const FLIGHT_MS = 900;
 const HOP_MS = 1300;
 const LEAVE_MS = 1500;
 
-export function RoomLive({ room, session, me, isStaff, owned }: Props) {
+export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: Props) {
+  const blockedSet = useMemo(() => new Set(blocked), [blocked]);
   const ownedSet = useMemo(() => new Set(owned), [owned]);
   const myStamps = useMemo(() => usableStamps(owned), [owned]);
   const router = useRouter();
@@ -158,6 +165,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
   const lastSentRef = useRef<number | null>(null);
 
   function playStamp(ev: StampEvent) {
+    if (blockedSet.has(ev.from) || blockedSet.has(ev.to)) return;
     const box = seatsRef.current;
     const from = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.from}"]`);
     const to = box?.querySelector<HTMLElement>(`[data-seat-user="${ev.to}"]`);
@@ -195,6 +203,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
   const lastEmoteRef = useRef<number | null>(null);
 
   function playEmote(ev: EmoteEvent) {
+    if (blockedSet.has(ev.from)) return;
     // 自分のエモートも、ほかの人のエモートも鳴らす
     if (!muted) playSound("emote");
     setEmotes((m) => ({ ...m, [ev.from]: { emote: ev.emote, key: ev.id } }));
@@ -289,7 +298,7 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
     },
   });
   // キック・BAN された人は、その人の画面が閉じるのを待たずに消す
-  const members = useMemo(() => presenceMembers.filter((m) => !removed.has(m.userId)), [presenceMembers, removed]);
+  const members = useMemo(() => presenceMembers.filter((m) => !removed.has(m.userId) && !blockedSet.has(m.userId)), [presenceMembers, removed, blockedSet]);
   // その人の画面が閉じて Presence から消えたら、隠すリストからも外す（キックのあと入り直せるように）
   useEffect(() => {
     const stale = [...removed].filter((id) => !presenceMembers.some((m) => m.userId === id));
@@ -717,6 +726,13 @@ export function RoomLive({ room, session, me, isStaff, owned }: Props) {
           </p>
         )}
       </footer>
+
+      <details open={todos.some((t) => !t.done_at)} className="rounded-3xl border border-line bg-paper p-4 shadow-sm">
+        <summary className="cursor-pointer font-bold">✅ ToDo</summary>
+        <div className="mt-3">
+          <TodoList initial={todos} compact />
+        </div>
+      </details>
     </div>
   );
 }

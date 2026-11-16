@@ -43,6 +43,13 @@ const MESSAGES: Record<string, string> = {
   not_in_room: "その人はもう部屋にいません",
   owner_only: "この操作はオーナーだけができます",
   not_member: "その人はこの部屋のメンバーではありません",
+  blocked: "ブロックしている・されているため、この操作はできません",
+  cannot_block_self: "自分はブロックできません",
+  too_many_todos: "まだ終わっていないやることは100個までです",
+  cannot_stamp_self: "自分の部屋にはスタンプを置けません",
+  profile_private: "プロフィールを公開すると、スタンプを置けます",
+  invalid_stamp: "そのスタンプは使えません",
+  too_fast: "少し時間をおいてから、もう一度どうぞ",
 };
 
 export function rpcErrorMessage(error: { message?: string } | null | undefined): string {

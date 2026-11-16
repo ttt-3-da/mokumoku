@@ -1,7 +1,7 @@
 import type { Avatar } from "@/lib/avatar";
 
 /** get_follow_info の戻り値 */
-export type FollowInfo = { followers: number; following: number; is_following: boolean; follows_me: boolean };
+export type FollowInfo = { followers: number; following: number; is_following: boolean; follows_me: boolean; blocking?: boolean; blocked_by?: boolean };
 
 /** list_follows・search_users などの1行 */
 export type UserRow = { username: string; display_name: string; bio: string; avatar: Avatar; is_following?: boolean };
@@ -24,10 +24,10 @@ export type LeaderRow = { username: string; display_name: string; avatar: Avatar
 /** list_notifications の1行 */
 export type NotificationRow = {
   id: string;
-  kind: "follow" | "badge" | "schedule";
+  kind: "follow" | "badge" | "schedule" | "mochi_stamp";
   created_at: string;
   read_at: string | null;
-  /** フォローのお知らせだけ入る */
+  /** フォロー・もちの部屋のスタンプのお知らせだけ入る */
   actor_username: string | null;
   actor_display_name: string | null;
   actor_avatar: Avatar | null;
@@ -36,7 +36,7 @@ export type NotificationRow = {
   room_id: string | null;
   room_name: string | null;
   room_icon: string | null;
-  /** バッジの ID */
+  /** バッジの ID・スタンプの ID */
   detail: string | null;
 };
 

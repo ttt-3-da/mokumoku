@@ -89,6 +89,26 @@ function NotificationBody({ n }: { n: NotificationRow }) {
     );
   }
   if (!n.actor_username || !n.actor_avatar) return null;
+  if (n.kind === "mochi_stamp") {
+    return (
+      <>
+        <Link href={`/u/${n.actor_username}`} className="shrink-0">
+          <Mochi avatar={n.actor_avatar} size={44} seed={n.actor_username} />
+        </Link>
+        <p className="min-w-0 flex-1 text-sm">
+          <Link href={`/u/${n.actor_username}`} className="font-bold hover:underline">
+            {n.actor_display_name}
+          </Link>{" "}
+          さんが
+          <Link href="/mochi" className="font-bold hover:underline">
+            もちの部屋
+          </Link>
+          にスタンプを置いていきました
+          <When n={n} />
+        </p>
+      </>
+    );
+  }
   return (
     <>
       <Link href={`/u/${n.actor_username}`} className="shrink-0">

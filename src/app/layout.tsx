@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Zen_Maru_Gothic } from "next/font/google";
 import { COLOR_SCHEME_SCRIPT } from "@/lib/color-scheme";
 import "./globals.css";
@@ -13,7 +13,11 @@ const maru = Zen_Maru_Gothic({
 export const metadata: Metadata = {
   title: { default: "Mokumoku", template: "%s | Mokumoku" },
   description: "おもちのアバターと一緒に、オンラインのもくもく自習室で勉強しよう。",
+  applicationName: "Mokumoku",
+  appleWebApp: { capable: true, title: "Mokumoku", statusBarStyle: "default" },
 };
+
+export const viewport: Viewport = { themeColor: "#fbe3e9" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

@@ -8,6 +8,7 @@ import { signOut } from "@/app/login/actions";
 
 const MAIN_LINKS = [
   { href: "/lobby", label: "ロビー", icon: "🏠" },
+  { href: "/todo", label: "ToDo", icon: "✅" },
   { href: "/timeline", label: "記録", icon: "📒" },
   { href: "/follows", label: "フォロー", icon: "🤝" },
   { href: "/users", label: "さがす", icon: "🔍" },

@@ -5,6 +5,7 @@ import { AdminEditProfile } from "@/components/admin-edit-profile";
 import { OfficialBadge } from "@/components/official-badge";
 import { DeskItem, Mochi } from "@/components/mochi";
 import { BadgeGrid } from "@/components/badge-grid";
+import { BlockButton } from "@/components/block-button";
 import { FollowButton } from "@/components/follow-button";
 import { ReportButton } from "@/components/report-button";
 import { ButtonLink, Card } from "@/components/ui";
@@ -55,6 +56,8 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
     if (isBadgeId(b.badge_id)) badges.set(b.badge_id, b.earned_at);
   }
   const follow = followData as FollowInfo | null;
+  // ブロックされている人のプロフィールは見られない（管理者は別）
+  if (follow?.blocked_by && !me.is_admin) return <NotAvailable />;
   const stats = statsData as ProfileStats | null;
 
   const joined = new Date(profile.created_at).toLocaleDateString("ja-JP", {
@@ -108,11 +111,16 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
             )}
             {!isMe && (
               <div className="mt-3 flex flex-wrap items-center gap-3">
-                {follow && <FollowButton username={profile.username} initialFollowing={follow.is_following} followsMe={follow.follows_me} />}
-                <Link href={`/u/${profile.username}/mochi`} className="text-sm text-ink-soft hover:underline">
-                  🏡 もちの部屋
-                </Link>
+                {follow && !follow.blocking && <FollowButton username={profile.username} initialFollowing={follow.is_following} followsMe={follow.follows_me} />}
+                {follow?.blocking ? (
+                  <span className="text-sm font-bold text-ink-soft">ブロック中</span>
+                ) : (
+                  <Link href={`/u/${profile.username}/mochi`} className="text-sm text-ink-soft hover:underline">
+                    🏡 もちの部屋に遊びに行く
+                  </Link>
+                )}
                 <ReportButton targetType="user" targetId={profile.id} />
+                <BlockButton username={profile.username} displayName={profile.display_name} initialBlocking={Boolean(follow?.blocking)} />
               </div>
             )}
             {isMe && (

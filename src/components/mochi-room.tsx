@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
+import { PlacedStamps, StampPalette, type RoomStamp } from "@/components/mochi-room-stamps";
 import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
 import { bodyOutline, faceStretch, outlineAngle, outlineNormal, type Bulge } from "@/lib/mochi-body";
 import { rpcErrorMessage } from "@/lib/errors";
@@ -18,24 +19,62 @@ import {
   type PlacedItem,
   type WallpaperId,
 } from "@/lib/mochi-room";
+import { usableStamps, type StampId } from "@/lib/stamps";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   avatar: Avatar;
   seed: string;
+  username: string;
   displayName: string;
   isMe: boolean;
   wallpaper: WallpaperId;
   items: PlacedItem[];
   owned: string[];
+  /** 遊びに来た人が置いていったスタンプ */
+  stamps: RoomStamp[];
+  /** 見ている人（スタンプを置く） */
+  visitor: { avatar: Avatar; isPublic: boolean };
 };
 
 /**
  * もちの部屋。もちをタップするとつぶれる、ドラッグすると伸びながらついてくる、
  * 勢いよく離すと部屋の中を跳ねまわる。自分の部屋なら壁紙と家具を模様がえできる
  */
-export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialWallpaper, items: initialItems, owned }: Props) {
+export function MochiRoom({ avatar, seed, username, displayName, isMe, wallpaper: initialWallpaper, items: initialItems, owned, stamps: initialStamps, visitor }: Props) {
   const ownedSet = new Set(owned);
+  const myStamps = usableStamps(owned);
+  const [stamps, setStamps] = useState(initialStamps);
+  const [stampBusy, setStampBusy] = useState(false);
+  const [stampMessage, setStampMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // 遊びに来た人：スタンプを部屋のどこかに置いていく
+  async function leaveStamp(id: StampId) {
+    setStampBusy(true);
+    setStampMessage(null);
+    const x = Math.round((10 + Math.random() * 80) * 10) / 10;
+    const y = Math.round((12 + Math.random() * 60) * 10) / 10;
+    const { data, error } = await createClient().rpc("leave_mochi_stamp", { p_username: username, p_stamp_id: id, p_x: x, p_y: y });
+    setStampBusy(false);
+    if (error || !data) {
+      setStampMessage({ ok: false, text: rpcErrorMessage(error) });
+      return;
+    }
+    setStamps((list) => [
+      ...list,
+      { id: data as string, stamp_id: id, x, y, created_at: new Date().toISOString(), mine: true, sender_username: "", sender_display_name: "あなた", sender_avatar: visitor.avatar },
+    ]);
+    setStampMessage({ ok: true, text: "スタンプを置きました！" });
+  }
+
+  async function removeStamp(st: RoomStamp) {
+    const { error } = await createClient().rpc("remove_mochi_stamp", { p_id: st.id });
+    if (error) {
+      setStampMessage({ ok: false, text: rpcErrorMessage(error) });
+      return;
+    }
+    setStamps((list) => list.filter((x) => x.id !== st.id));
+  }
   const [wallpaper, setWallpaper] = useState(initialWallpaper);
   const [items, setItems] = useState(initialItems);
   const [editing, setEditing] = useState(false);
@@ -421,6 +460,8 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           </div>
         ))}
 
+        {!editing && <PlacedStamps stamps={stamps} canRemoveAll={isMe} onRemove={(st) => void removeStamp(st)} />}
+
         <div
           ref={mochiRef}
           className={`absolute left-0 top-0 ${editing ? "pointer-events-none opacity-60" : "cursor-grab active:cursor-grabbing"}`}
@@ -435,6 +476,23 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         </div>
       </div>
       {!editing && <p className="text-xs text-ink-soft">もちを押すとむにっとつぶれて、離すとぽよんと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。</p>}
+
+      {!isMe && (
+        <div className="flex flex-col gap-2 rounded-3xl border border-line bg-paper p-4 shadow-sm">
+          <h2 className="text-sm font-bold">スタンプを置いていく</h2>
+          {visitor.isPublic ? (
+            <StampPalette stamps={myStamps} avatar={visitor.avatar} disabled={stampBusy} onPick={(id) => void leaveStamp(id)} />
+          ) : (
+            <p className="text-xs text-ink-soft">プロフィールを公開すると、スタンプを置けます（設定の「公開範囲」）。</p>
+          )}
+          {stampMessage && (
+            <p role={stampMessage.ok ? "status" : "alert"} className={`text-xs ${stampMessage.ok ? "text-green-700" : "text-red-600"}`}>
+              {stampMessage.text}
+            </p>
+          )}
+        </div>
+      )}
+      {isMe && !editing && stamps.length > 0 && <p className="text-xs text-ink-soft">遊びに来た人が置いていったスタンプ：{stamps.length}個（押すとだれのスタンプかわかります）</p>}
 
       {editing && (
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-4 shadow-sm">

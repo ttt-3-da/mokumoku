@@ -54,7 +54,7 @@ test("2人目が入室すると、1人目の画面にリアルタイムで表示
 
   await signUp(b, undefined, "もちB");
   await b.goto(entryUrl);
-  await expect(b.getByText("もちA")).toBeVisible(); // 入室前でも在室者が見える
+  await expect(b.locator("li").getByText("もちA")).toBeVisible(); // 入室前でも在室者が見える
   await b.getByLabel("今からやること").fill("英語");
   await b.getByRole("button", { name: "入室する" }).click();
 
