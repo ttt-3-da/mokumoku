@@ -49,6 +49,9 @@ type Handlers = {
  * - Broadcast：スタンプ、タイマー開始、キック・BAN・役割変更の通知
  * チャンネルへの参加可否は realtime.messages の RLS（その部屋に入室中の人だけ）で判定される。
  */
+/** 接続が止まっていないかを確かめる間かく */
+const WATCHDOG_MS = 30_000;
+
 export function useRoomChannel({ roomId, self, handlers }: { roomId: string; self: Self; handlers: Handlers }) {
   const [members, setMembers] = useState<PresenceMeta[]>([]);
   const [connection, setConnection] = useState<ConnectionState>("connecting");
@@ -64,6 +67,7 @@ export function useRoomChannel({ roomId, self, handlers }: { roomId: string; sel
   useEffect(() => {
     const supabase = createClient();
     let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | null = null;
 
     const channel = supabase.channel(`room:${roomId}`, {
       config: { private: true, presence: { key: self.userId }, broadcast: { self: false } },
@@ -107,12 +111,28 @@ export function useRoomChannel({ roomId, self, handlers }: { roomId: string; sel
           handlersRef.current.onSubscribed();
         } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
           setConnection("error");
+        } else if (status === "CLOSED" && !cancelled) {
+          // サーバーに閉じられた（ログインの期限が切れたときなど）。閉じたチャンネルは自分ではつなぎ直さないので、作り直す。
+          // そのままにすると、自分の画面は「接続中」のまま、ほかの人の画面から消えてしまう
+          setConnection("connecting");
+          retry = setTimeout(() => setReconnectKey((k) => k + 1), 2000);
         }
       });
     })();
 
+    // 見回り：閉じた・エラーのまま止まっていたら作り直す（見ているタブでも、切り替えを待たずに直す）
+    const watchdog = setInterval(() => {
+      if (cancelled) return;
+      if (channel.state === "closed" || channel.state === "errored") {
+        setConnection("connecting");
+        setReconnectKey((k) => k + 1);
+      }
+    }, WATCHDOG_MS);
+
     return () => {
       cancelled = true;
+      clearInterval(watchdog);
+      if (retry) clearTimeout(retry);
       channelRef.current = null;
       void supabase.removeChannel(channel);
     };
