@@ -50,6 +50,7 @@ import { usableStamps, type StampId } from "@/lib/stamps";
 import { TASK_MAX, validateTask } from "@/lib/validation";
 import { IdleDialog, useIdleCheck } from "./idle-check";
 import { MemberActions, type RoomRole } from "./member-actions";
+import { CopyInviteButton } from "@/components/invite-link";
 import { OwnerMenu } from "./owner-menu";
 import { RoomScene } from "./room-scene";
 import { Seats, type SeatMember } from "./seats";
@@ -552,6 +553,7 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
           >
             {muted ? "🔕" : "🔔"}
           </button>
+          {staffNow && room.visibility !== "public" && <CopyInviteButton code={room.invite_code} />}
           {staffNow && (
             <Button
               variant="ghost"

@@ -10,6 +10,7 @@ import { createClient, requireProfile } from "@/lib/supabase/server";
 import type { RoomOwner, RoomPreview } from "@/lib/types";
 import { OfficialBadge } from "@/components/official-badge";
 import Link from "next/link";
+import { InviteLink } from "@/components/invite-link";
 import { EnterForm } from "./enter-form";
 import { PendingWatcher } from "./pending-watcher";
 
@@ -109,9 +110,13 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
       </Card>
 
       {preview.is_staff && preview.invite_code && (
-        <Card className="flex flex-col gap-1 text-sm">
-          <span className="font-bold">招待URL（オーナー・モデレーターにだけ表示）</span>
-          <code className="break-all rounded-xl bg-cream px-3 py-2 text-xs">/r/{preview.invite_code}</code>
+        <Card className={`flex flex-col gap-2 text-sm ${room.visibility === "public" ? "" : "border-2 border-accent/50"}`}>
+          <span className="font-bold">
+            🔗 招待リンク
+            <span className="ml-1 text-xs font-normal text-ink-soft">（オーナー・モデレーターにだけ表示）</span>
+          </span>
+          {room.visibility === "unlisted" && <span className="text-xs">この部屋は限定なので、このリンクを送った人だけが入れます。</span>}
+          <InviteLink code={preview.invite_code} roomName={room.name} />
           {(preview.pending_count ?? 0) > 0 && (
             <span className="text-accent-strong">入室の申請が {preview.pending_count} 件あります。入室後の「⚙️ 設定」から承認できます。</span>
           )}

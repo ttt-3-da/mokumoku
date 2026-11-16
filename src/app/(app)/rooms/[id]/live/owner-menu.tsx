@@ -1,5 +1,6 @@
 "use client";
 
+import { InviteLink } from "@/components/invite-link";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Mochi } from "@/components/mochi";
@@ -86,7 +87,10 @@ export function OwnerMenu({
         <div className="flex flex-col gap-4 overflow-y-auto p-4 text-sm">
           {tab === "basic" && (
             <>
-              <InviteLink code={room.invite_code} />
+              <div className="flex flex-col gap-1">
+                <span className="font-bold">招待リンク</span>
+                <InviteLink code={room.invite_code} roomName={room.name} />
+              </div>
               {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
               <ScheduleEditor room={room} />
               <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
@@ -172,35 +176,6 @@ function ScheduleEditor({ room }: { room: Room }) {
         </p>
       )}
     </fieldset>
-  );
-}
-
-function InviteLink({ code }: { code: string }) {
-  const [copied, setCopied] = useState(false);
-  const url = typeof window === "undefined" ? `/r/${code}` : `${window.location.origin}/r/${code}`;
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="font-bold">招待URL</span>
-      <div className="flex gap-2">
-        <input readOnly value={url} aria-label="招待URL" className="min-w-0 flex-1 rounded-xl border border-line bg-paper px-3 py-1.5 text-xs" onFocus={(e) => e.currentTarget.select()} />
-        <Button
-          variant="secondary"
-          className="shrink-0"
-          onClick={async () => {
-            try {
-              await navigator.clipboard.writeText(url);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            } catch {
-              // クリップボードが使えない環境では入力欄を選択してコピーしてもらう
-            }
-          }}
-        >
-          {copied ? "コピーしました" : "コピー"}
-        </Button>
-      </div>
-      <span className="text-xs text-ink-soft">このURLを開いた人は、入室前の画面に直接来られます。</span>
-    </div>
   );
 }
 

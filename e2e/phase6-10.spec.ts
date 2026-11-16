@@ -27,13 +27,16 @@ test("限定部屋に招待URLから入り、スタンプを送ると相手の�
   await a.getByRole("button", { name: "部屋をつくる" }).click();
   await expect(a).toHaveURL(/\/rooms\/[0-9a-f-]{36}$/);
 
-  // オーナーには招待URLが見える
-  const invitePath = (await a.locator("code", { hasText: "/r/" }).textContent())!.trim();
-  expect(invitePath).toMatch(/^\/r\/[\w-]+$/);
+  // オーナーには招待リンクが、https:// からまるごと見える
+  const inviteUrl = (await a.getByRole("link", { name: "招待リンク" }).textContent())!.trim();
+  expect(inviteUrl).toMatch(/^https?:\/\/[^/]+\/r\/[\w-]+$/);
+  const invitePath = new URL(inviteUrl).pathname;
 
   await a.getByLabel("今からやること").fill("招待を待つ");
   await a.getByRole("button", { name: "入室する" }).click();
   await expect(a.getByText("● 接続中")).toBeVisible({ timeout: 15_000 });
+  // 部屋の中の上にも「🔗 招待リンク」のボタンがある
+  await expect(a.getByRole("button", { name: "🔗 招待リンク" })).toBeVisible();
 
   // B：招待URLを開くと入室前画面に直接来る
   await signUp(b, undefined, "招待されたもち");
