@@ -43,7 +43,7 @@ type HeartbeatResult = { session_id: string; room_id: string; timer_started_at: 
 
 /**
  * 60秒ごとにハートビートを送る（タブが非表示でも送る。ほかのタブを見ている間も学習時間に含めるため）。
- * ブラウザを閉じるとハートビートが止まり、3分後に cron がセッションを閉じる。
+ * タブを閉じると /api/leaving に知らせ、30秒戻らなければ cron が閉じる（知らせが届かなくても3分後に閉じる）。
  * - task が変わったらすぐに送って DB にも保存する
  * - セッションがもう閉じられていたら onLost を呼ぶ
  */
@@ -113,9 +113,19 @@ export function useHeartbeat({
     // 「今やること」が変わったときだけ task 付きで送る
     const taskChanged = taskRef.current !== task;
     taskRef.current = task;
-    if (taskChanged) void beat(task);
+    // 開いたとき（再読み込みを含む）もすぐ送る。閉じるときの「出ていった」を取り消すため
+    void beat(taskChanged ? task : null);
 
     const id = setInterval(() => void beat(null), HEARTBEAT_MS);
+    // タブを閉じる・ほかのサイトへ移るとき：「出ていった」と知らせる（30秒戻らなければ退室になる）
+    const onPageHide = () => {
+      try {
+        navigator.sendBeacon("/api/leaving");
+      } catch {
+        // 送れなくても、これまでどおり3分後に閉じられる
+      }
+    };
+    window.addEventListener("pagehide", onPageHide);
     // 見ていないタブではタイマーが間引かれるので、戻ってきたらすぐ1回送る
     const onVisible = () => {
       if (document.visibilityState === "visible") void beat(null);
@@ -129,6 +139,7 @@ export function useHeartbeat({
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener(BEAT_NOW_EVENT, onNow);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [task, userId, enabled]);
 }

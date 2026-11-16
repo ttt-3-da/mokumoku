@@ -4,6 +4,9 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(17);
 
+-- E2E で作られた投稿が残っていても数がずれないように（最後に rollback するので元に戻る）
+delete from public.posts;
+
 update public.badge_defs set coins = 0;
 alter table public.follows disable trigger follows_badge;
 alter table public.rooms disable trigger rooms_badge;
