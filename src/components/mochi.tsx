@@ -135,7 +135,7 @@ export function Mochi({
               {color.shine && (
                 // きんいろ：左上に光の反射
                 <g fill="#fff" clipPath={`url(#body-${uid})`}>
-                  <ellipse cx="34" cy="44" rx="10" ry="4.5" opacity="0.6" transform="rotate(-25 34 44)" />
+                  <ellipse className="mp-fixed" cx="34" cy="44" rx="10" ry="4.5" opacity="0.6" transform="rotate(-25 34 44)" />
                   <circle cx="45" cy="40" r="2" opacity="0.7" />
                 </g>
               )}
@@ -151,8 +151,8 @@ export function Mochi({
                     fill={HACHIMAKI_COLOR[avatar.hachimaki]}
                     clipPath={`url(#body-${uid})`}
                   />
-                  <ellipse cx="85" cy="47" rx="5" ry="3" fill={HACHIMAKI_COLOR[avatar.hachimaki]} transform="rotate(25 85 47)" />
-                  <ellipse cx="86" cy="52" rx="4.5" ry="2.6" fill={HACHIMAKI_COLOR[avatar.hachimaki]} transform="rotate(60 86 52)" />
+                  <ellipse className="mp-fixed" cx="85" cy="47" rx="5" ry="3" fill={HACHIMAKI_COLOR[avatar.hachimaki]} transform="rotate(25 85 47)" />
+                  <ellipse className="mp-fixed" cx="86" cy="52" rx="4.5" ry="2.6" fill={HACHIMAKI_COLOR[avatar.hachimaki]} transform="rotate(60 86 52)" />
                 </g>
               )}
 
@@ -189,7 +189,7 @@ export function Mochi({
               {/* 手（必要なときだけ小さな丸） */}
               {top && focus && !busy && (
                 <g className="mochi-pen">
-                  <rect x="72" y="66" width="3.4" height="17" rx="1.2" fill="#5b8def" transform="rotate(35 73.7 74.5)" />
+                  <rect className="mp-fixed" x="72" y="66" width="3.4" height="17" rx="1.2" fill="#5b8def" transform="rotate(35 73.7 74.5)" />
                   <circle cx="74" cy="82" r="4.6" fill={color.fill} stroke={color.edge} strokeWidth={STROKE} />
                 </g>
               )}
@@ -387,7 +387,7 @@ function HeadItem({ kind }: { kind: Avatar["head"] }) {
   switch (kind) {
     case "ribbon":
       return (
-        <g fill="#ff8fab" transform="translate(68 36) rotate(-15)">
+        <g className="mp-fixed" fill="#ff8fab" transform="translate(68 36) rotate(-15)">
           <ellipse cx="-6" cy="0" rx="7" ry="4.6" transform="rotate(-20 -6 0)" />
           <ellipse cx="6" cy="0" rx="7" ry="4.6" transform="rotate(20 6 0)" />
           <circle cx="0" cy="0" r="3" fill="#ff7096" />
@@ -397,7 +397,7 @@ function HeadItem({ kind }: { kind: Avatar["head"] }) {
       return (
         <g>
           <rect x="49" y="26" width="2.6" height="9" rx="1.3" fill="#6aa35c" />
-          <ellipse cx="57" cy="25" rx="8" ry="4.4" fill="#7cbf6a" transform="rotate(-25 57 25)" />
+          <ellipse className="mp-fixed" cx="57" cy="25" rx="8" ry="4.4" fill="#7cbf6a" transform="rotate(-25 57 25)" />
         </g>
       );
     case "crown":
