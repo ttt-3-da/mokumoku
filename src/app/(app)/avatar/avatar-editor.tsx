@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { DeskItem, Mochi, type MochiState } from "@/components/mochi";
+import { SoundToggle } from "@/components/sound-toggle";
 import { Button, Card } from "@/components/ui";
+import { playSparkle } from "@/lib/mochi-sound";
 import {
   CHEEKS,
   COLORS,
@@ -72,6 +74,7 @@ export function AvatarEditor({
   function choose(key: PartKey, value: string) {
     setAvatar((a) => ({ ...a, [key]: value }));
     setMessage(null);
+    playSparkle();
     // ハチマキは集中中にしか見えないので、選んだらプレビューを集中中にする
     if (key === "hachimaki") setPreviewState("focus");
   }
@@ -86,6 +89,7 @@ export function AvatarEditor({
         return;
       }
       setAvatar((a) => ({ ...a, form }));
+      playSparkle();
       setSaved((a) => ({ ...a, form }));
       setMessage({ ok: true, text: `「${FORMS[form]}」になりました！` });
     });
@@ -111,6 +115,7 @@ export function AvatarEditor({
           <Mochi avatar={avatar} size={150} state={previewState} seed={seed} label="プレビュー" />
           <DeskItem kind={avatar.desk} size={44} level={3} />
         </div>
+        <SoundToggle />
         <div className="flex flex-wrap justify-center gap-1" role="group" aria-label="プレビューの状態">
           {PREVIEW_STATES.map((s) => (
             <button
