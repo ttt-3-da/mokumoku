@@ -5,7 +5,7 @@
 import { useSyncExternalStore } from "react";
 
 const KEY = "mokumoku.sound";
-const VOLUME = 0.22;
+const VOLUME = 0.42;
 const listeners = new Set<() => void>();
 let enabled: boolean | null = null;
 let ctx: AudioContext | null = null;
@@ -93,72 +93,57 @@ function tone(a: AudioContext, opts: { type?: OscillatorType; from: number; to: 
   osc.stop(t0 + opts.dur + 0.02);
 }
 
-/** 「さっ」「ぺち」の、ざらっとした短い音 */
-function noise(a: AudioContext, opts: { dur: number; vol: number; cutoff: number; delay?: number }) {
-  const t0 = a.currentTime + (opts.delay ?? 0);
-  const len = Math.ceil(a.sampleRate * opts.dur);
-  const buf = a.createBuffer(1, len, a.sampleRate);
-  const data = buf.getChannelData(0);
-  for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
-  const src = a.createBufferSource();
-  src.buffer = buf;
-  const filter = a.createBiquadFilter();
-  filter.type = "lowpass";
-  filter.frequency.value = opts.cutoff;
-  const gain = a.createGain();
-  gain.gain.value = opts.vol;
-  src.connect(filter).connect(gain).connect(master!);
-  voices++;
-  src.onended = () => voices--;
-  src.start(t0);
-}
-
-/** 押したとき：「むにゅっ」 */
+/** 押したとき：「むにゅっ」。高めで、少しゆれながら下がる */
 export function playPress() {
   const a = ready("press", 0.08);
   if (!a) return;
-  tone(a, { from: 330, to: 170, dur: 0.22, vol: 0.7, attack: 0.03, cutoff: 900 });
-  tone(a, { type: "triangle", from: 180, to: 110, dur: 0.18, vol: 0.25, attack: 0.03, cutoff: 600 });
+  tone(a, { from: 620, to: 400, dur: 0.18, vol: 0.7, attack: 0.02, cutoff: 2600 });
+  tone(a, { from: 1240, to: 800, dur: 0.12, vol: 0.18, attack: 0.02, cutoff: 3200 });
 }
 
-/** 離したとき：「ぽよん」 */
+/** 離したとき：「ぽよん」。ぴょこっと上がって、もう一度はずむ */
 export function playRelease() {
   const a = ready("release", 0.08);
   if (!a) return;
-  tone(a, { from: 240, to: 520, dur: 0.09, vol: 0.6, cutoff: 1500 });
-  tone(a, { from: 520, to: 380, dur: 0.2, vol: 0.45, delay: 0.08, cutoff: 1500 });
+  tone(a, { from: 420, to: 980, dur: 0.08, vol: 0.65, cutoff: 3000 });
+  tone(a, { from: 700, to: 1180, dur: 0.12, vol: 0.45, delay: 0.08, cutoff: 3000 });
 }
 
-/** ぶつかったとき：床や壁は「ぺちっ」「ぽすっ」、天井は「ぽこっ」。勢いが強いほど大きく低い */
+/** ぶつかったとき：床や壁は「ぽてっ」、天井は「ぴこっ」。勢いが強いほど大きい */
 export function playBump(side: "bottom" | "top" | "left" | "right", speed: number) {
   const a = ready("bump", 0.06);
   if (!a) return;
-  const p = Math.min(1, speed / 1800);
-  const vol = 0.15 + p * 0.75;
+  const p = Math.min(1, speed / 1600);
+  const vol = 0.3 + p * 0.7;
   if (side === "top") {
-    tone(a, { from: 720 - p * 160, to: 340, dur: 0.12, vol, cutoff: 2200 });
+    tone(a, { from: 980, to: 1500, dur: 0.07, vol, cutoff: 4000 });
+    tone(a, { from: 1500, to: 1300, dur: 0.06, vol: vol * 0.5, delay: 0.06, cutoff: 4000 });
     return;
   }
-  tone(a, { from: 210 - p * 90, to: 70, dur: 0.14 + p * 0.06, vol, cutoff: 700 });
-  noise(a, { dur: 0.05, vol: vol * 0.5, cutoff: 1800 - p * 600 });
+  const base = side === "bottom" ? 560 : 660;
+  tone(a, { from: base - p * 120, to: base * 0.55, dur: 0.11, vol, cutoff: 2600 });
+  tone(a, { from: base * 1.5, to: base * 1.9, dur: 0.06, vol: vol * 0.35, delay: 0.07, cutoff: 3600 });
 }
 
-/** アクセサリーを付けたとき：「しゃらん」 */
+/** アクセサリーを付けたとき：「きらりん」 */
 export function playSparkle() {
   const a = ready("sparkle", 0.12);
   if (!a) return;
-  [1320, 1760, 2090, 2640].forEach((f, i) => tone(a, { type: "triangle", from: f, to: f * 0.98, dur: 0.35, vol: 0.22, delay: i * 0.05, cutoff: 6000 }));
+  [1047, 1319, 1568, 2093].forEach((f, i) => {
+    tone(a, { from: f, to: f, dur: 0.4, vol: 0.3, delay: i * 0.055, attack: 0.005, cutoff: 7000 });
+    tone(a, { type: "triangle", from: f * 2, to: f * 2, dur: 0.2, vol: 0.06, delay: i * 0.055, attack: 0.005, cutoff: 7000 });
+  });
 }
 
-/** 家具を置いたとき：「ことっ」 */
+/** 家具を置いたとき：「ぽこっ」 */
 export function playPlace() {
   const a = ready("place", 0.08);
   if (!a) return;
-  tone(a, { type: "triangle", from: 520, to: 240, dur: 0.09, vol: 0.55, attack: 0.004, cutoff: 1600 });
-  noise(a, { dur: 0.03, vol: 0.25, cutoff: 3000 });
+  tone(a, { from: 900, to: 560, dur: 0.08, vol: 0.6, attack: 0.004, cutoff: 3000 });
+  tone(a, { from: 1350, to: 1100, dur: 0.05, vol: 0.2, delay: 0.05, attack: 0.004, cutoff: 3600 });
 }
 
-// 引っぱっているあいだ：「みょーん」。伸びるほど高くなる
+// 引っぱっているあいだ：「みょ〜ん」。伸びるほど高くなる
 let stretch: { osc: OscillatorNode; gain: GainNode; lfo: OscillatorNode } | null = null;
 
 /** amount：0（伸びていない）〜1（伸びきった） */
@@ -177,8 +162,8 @@ export function setStretch(amount: number) {
     const lfo = a.createOscillator();
     const lfoGain = a.createGain();
     osc.type = "sine";
-    lfo.frequency.value = 7;
-    lfoGain.gain.value = 9;
+    lfo.frequency.value = 6;
+    lfoGain.gain.value = 22;
     lfo.connect(lfoGain).connect(osc.frequency);
     gain.gain.setValueAtTime(0.0001, t);
     osc.connect(gain).connect(master);
@@ -187,8 +172,8 @@ export function setStretch(amount: number) {
     stretch = { osc, gain, lfo };
   }
   const k = Math.min(1, amount);
-  stretch.osc.frequency.setTargetAtTime(200 + k * 360, t, 0.05);
-  stretch.gain.gain.setTargetAtTime(0.12 + k * 0.25, t, 0.05);
+  stretch.osc.frequency.setTargetAtTime(420 + k * 620, t, 0.05);
+  stretch.gain.gain.setTargetAtTime(0.14 + k * 0.22, t, 0.05);
 }
 
 export function stopStretch() {
