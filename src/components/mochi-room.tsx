@@ -100,7 +100,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
 
   // もちもちのスクイーズ：押すとむにっと横に広がってつぶれ、離すとぽよんと弾んで元に戻る
   const squeezeRef = useRef<HTMLDivElement>(null);
-  const squeeze = useRef({ v: 0, vel: 0, holding: false });
+  const squeeze = useRef({ v: 0, vel: 0, holding: false, side: "bottom" as "bottom" | "top" | "left" | "right" });
   // つまんだところの出っ張り（viewBox の単位）。ばねで出たり戻ったりする
   const pinch = useRef({ copy: 0, angle: 0, nx: 0, ny: 0, k: 1, x: 0, y: 0, vx: 0, vy: 0 });
   const form = avatar.form ?? "round";
@@ -162,7 +162,12 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const sy = 1 - q.v * 0.36;
       const sx = 1 / Math.sqrt(sy);
       const el = squeezeRef.current;
-      if (el) el.style.transform = q.v ? `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})` : "";
+      // ぶつかった面に向かってつぶれる（床・天井はたて、壁はよこ）
+      if (el) {
+        const across = q.side === "left" || q.side === "right";
+        el.style.transformOrigin = { bottom: "50% 100%", top: "50% 0%", left: "0% 50%", right: "100% 50%" }[q.side];
+        el.style.transform = q.v ? (across ? `scale(${sy.toFixed(4)}, ${sx.toFixed(4)})` : `scale(${sx.toFixed(4)}, ${sy.toFixed(4)})`) : "";
+      }
       if (q.v === 0 && q.vel === 0 && !q.holding && !bulging) {
         squeezeRaf.current = null;
         return;
@@ -228,12 +233,24 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       last = now;
       const { w, h } = roomSize();
       const s = sizeRef.current;
-      const before = Math.abs(body.current.vy);
-      const next = stepBounce(body.current, dt, w, h, s);
+      const prev = body.current;
+      const next = stepBounce(prev, dt, w, h, s);
       body.current = { x: next.x, y: next.y, vx: next.vx, vy: next.vy };
-      if (next.hit && next.y >= h - s - 0.5 && before > 200) {
-        squeeze.current.vel += Math.min(9, before / 220);
-        runSqueeze();
+      if (next.hit) {
+        // 床・壁・天井にぶつかったら、その勢いのぶんだけむにゅっとつぶれて、ぽよんと戻る
+        const hits: ["bottom" | "top" | "left" | "right", number][] = [];
+        if (next.y >= h - s - 0.5 && prev.vy > 0) hits.push(["bottom", prev.vy]);
+        if (next.y <= 0.5 && prev.vy < 0) hits.push(["top", -prev.vy]);
+        if (next.x <= 0.5 && prev.vx < 0) hits.push(["left", -prev.vx]);
+        if (next.x >= w - s - 0.5 && prev.vx > 0) hits.push(["right", prev.vx]);
+        const [side, speed] = hits.sort((a, b) => b[1] - a[1])[0] ?? ["bottom", 0];
+        if (speed > 120) {
+          const q = squeeze.current;
+          // つぶれている途中で向きを変えると形が飛ぶので、ほぼ戻ってから切りかえる
+          if (Math.abs(q.v) < 0.15) q.side = side;
+          q.vel += Math.min(15, speed / 130);
+          runSqueeze();
+        }
       }
       paint();
       const resting = next.y >= h - s - 0.5 && Math.abs(next.vx) < 8 && next.vy === 0;
@@ -259,6 +276,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     body.current.vx = 0;
     body.current.vy = 0;
     squeeze.current.holding = true;
+    squeeze.current.side = "bottom";
     pinch.current = { ...pinch.current, ...pinchPoint(px - body.current.x, py - body.current.y, sizeRef.current, form) };
     runSqueeze();
   }
