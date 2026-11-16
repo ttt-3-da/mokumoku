@@ -115,7 +115,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       const q = squeeze.current;
       // ばねで動かす：押すとむにーっとつぶれ、離すと少し伸び上がってから、ぽよんぽよんと落ち着く
       // つまんで動かしているときは、体はつぶさない（出っ張りだけ）
-      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0 : 0.85) : 0;
+      const target = q.holding ? (mode.current === "drag" && grab.current.moved ? 0 : 0.64) : 0;
       const k = q.holding ? 70 : 160; // 押すときはやわらかく、戻るときは弾むように
       const c = q.holding ? 14 : 9;
       q.vel += (-k * (q.v - target) - c * q.vel) * dt;
@@ -159,7 +159,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         q.vel = 0;
       }
       // 高さが縮んだぶん、横にふくらむ（もちの量は変わらない）
-      const sy = 1 - q.v * 0.36;
+      const sy = 1 - q.v * 0.48;
       const sx = 1 / Math.sqrt(sy);
       const el = squeezeRef.current;
       // ぶつかった面に向かってつぶれる（床・天井はたて、壁はよこ）
@@ -244,11 +244,11 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
         if (next.x <= 0.5 && prev.vx < 0) hits.push(["left", -prev.vx]);
         if (next.x >= w - s - 0.5 && prev.vx > 0) hits.push(["right", prev.vx]);
         const [side, speed] = hits.sort((a, b) => b[1] - a[1])[0] ?? ["bottom", 0];
-        if (speed > 120) {
+        if (speed > 90) {
           const q = squeeze.current;
           // つぶれている途中で向きを変えると形が飛ぶので、ほぼ戻ってから切りかえる
           if (Math.abs(q.v) < 0.15) q.side = side;
-          q.vel += Math.min(15, speed / 130);
+          q.vel += Math.min(26, speed / 75);
           runSqueeze();
         }
       }
