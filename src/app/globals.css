@@ -473,3 +473,48 @@ body {
   100% { transform: scale(1, 1); }
 }
 .mochi-squish { animation: mochi-squish 0.55s ease-out; }
+
+/* ToDo：罫線の入ったノートの紙。1行 2rem ごとに罫線、左に赤い余白線 */
+:root {
+  --sheet: #fffdf6;
+  --sheet-rule: #d9e3ee;
+  --sheet-margin: #f2b8b8;
+  --graphite: #57524d;
+}
+:root[data-theme="dark"] {
+  --sheet: #2f2b28;
+  --sheet-rule: #46423f;
+  --sheet-margin: #6b4446;
+  --graphite: #c9c2ba;
+}
+.todo-sheet {
+  background-color: var(--sheet);
+  background-image:
+    linear-gradient(to right, transparent 2.1rem, var(--sheet-margin) 2.1rem, var(--sheet-margin) calc(2.1rem + 1px), transparent calc(2.1rem + 1px)),
+    repeating-linear-gradient(to bottom, transparent 0, transparent calc(2rem - 1px), var(--sheet-rule) calc(2rem - 1px), var(--sheet-rule) 2rem);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 0 0 1px var(--line);
+  color: var(--graphite);
+}
+/* チェックしたときに、鉛筆の線がすっと引かれる */
+@keyframes pencil-draw {
+  from { stroke-dashoffset: 1; }
+  to { stroke-dashoffset: 0; }
+}
+.pencil-draw {
+  stroke-dasharray: 1;
+  animation: pencil-draw 0.35s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pencil-draw { animation: none; }
+}
+/* 横線は、左から右へ見えていく（線の長さに関係なく同じ速さで） */
+@keyframes pencil-wipe {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.pencil-wipe {
+  animation: pencil-wipe 0.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pencil-wipe { animation: none; }
+}
