@@ -5,8 +5,6 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties, type Poin
 import { FurnitureArt } from "@/components/furniture-art";
 import { Mochi } from "@/components/mochi";
 import { FORM_STACK, FORM_STACK_STEP, type Avatar } from "@/lib/avatar";
-import { SoundToggle } from "@/components/sound-toggle";
-import { playBump, playPlace, playPress, playRelease, setStretch, stopStretch } from "@/lib/mochi-sound";
 import { bodyOutline, faceStretch, outlineAngle, outlineNormal, type Bulge } from "@/lib/mochi-body";
 import { rpcErrorMessage } from "@/lib/errors";
 import {
@@ -67,14 +65,12 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     setItems((list) => list.map((it, i) => (i === d.index ? { ...it, x, y } : it)));
   }
   function onItemUp() {
-    if (dragItem.current) playPlace();
     dragItem.current = null;
   }
 
   function addItem(id: FurnitureId) {
     if (items.length >= MAX_ROOM_ITEMS) return;
     setItems((list) => [...list, { id, x: 40 + Math.random() * 20, y: 50 }]);
-    playPlace();
     setSelected(items.length);
   }
 
@@ -142,9 +138,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
       pc.vy += (-pk * (pc.y - ty) - pd * pc.vy) * dt;
       pc.x += pc.vx * dt;
       pc.y += pc.vy * dt;
-      // 引っぱっているあいだは「みょーん」。伸びるほど高くなる
-      if (pinching) setStretch(Math.hypot(pc.x, pc.y) / 40);
-      else stopStretch();
       const bulging = pinching || Math.hypot(pc.x, pc.y) > 0.05 || Math.hypot(pc.vx, pc.vy) > 0.5;
       if (!bulging) {
         pc.x = pc.y = pc.vx = pc.vy = 0;
@@ -187,7 +180,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
   useEffect(
     () => () => {
       if (squeezeRaf.current) cancelAnimationFrame(squeezeRaf.current);
-      stopStretch();
     },
     [],
   );
@@ -257,7 +249,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           // つぶれている途中で向きを変えると形が飛ぶので、ほぼ戻ってから切りかえる
           if (Math.abs(q.v) < 0.15) q.side = side;
           q.vel += Math.min(26, speed / 75);
-          playBump(side, speed);
           runSqueeze();
         }
       }
@@ -286,7 +277,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     body.current.vy = 0;
     squeeze.current.holding = true;
     squeeze.current.side = "bottom";
-    playPress();
     pinch.current = { ...pinch.current, ...pinchPoint(px - body.current.x, py - body.current.y, sizeRef.current, form) };
     runSqueeze();
   }
@@ -330,8 +320,6 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     const g = grab.current;
     const b = body.current;
     squeeze.current.holding = false;
-    stopStretch();
-    playRelease();
     if (!g.moved) {
       // タップ：短く押しても、むにっとつぶれてからぽよんと戻る
       b.vx = 0;
@@ -356,14 +344,13 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <h1 className="text-2xl font-bold">{isMe ? "もちの部屋" : `${displayName} さんのもちの部屋`}</h1>
-        <SoundToggle className="ml-auto" />
         {isMe && !editing && (
-          <button type="button" onClick={() => setEditing(true)} className="rounded-full bg-paper px-4 py-1.5 text-sm font-bold shadow-sm hover:bg-sakura/20">
+          <button type="button" onClick={() => setEditing(true)} className="ml-auto rounded-full bg-paper px-4 py-1.5 text-sm font-bold shadow-sm hover:bg-sakura/20">
             🪑 模様がえ
           </button>
         )}
         {isMe && editing && (
-          <div className="flex gap-2">
+          <div className="ml-auto flex gap-2">
             <button
               type="button"
               onClick={() => {
@@ -447,7 +434,7 @@ export function MochiRoom({ avatar, seed, displayName, isMe, wallpaper: initialW
           </div>
         </div>
       </div>
-      {!editing && <p className="text-xs text-ink-soft">もちを押すとむにっとつぶれて、離すとぽよんと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。「🔇 音なし」を押すと効果音が鳴ります。</p>}
+      {!editing && <p className="text-xs text-ink-soft">もちを押すとむにっとつぶれて、離すとぽよんと戻ります。ドラッグで動かせて、勢いよく投げると部屋中を跳ねまわります。</p>}
 
       {editing && (
         <div className="flex flex-col gap-4 rounded-3xl border border-line bg-paper p-4 shadow-sm">
