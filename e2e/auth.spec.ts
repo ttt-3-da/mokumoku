@@ -14,6 +14,9 @@ test("新規登録 → ログアウト → ログインできる", async ({ page
   await page.getByLabel("パスワード").fill(password);
   await page.getByRole("button", { name: "はじめる" }).click();
 
+  // 登録直後は復活コードの画面
+  await expect(page).toHaveURL(/\/recovery-code\?welcome=1/);
+  await page.getByRole("link", { name: "保存したので、はじめる →" }).click();
   await expect(page).toHaveURL(/\/lobby/);
   // 登録直後は使い方の案内が出る。最後まで進めて閉じる
   const tour = page.getByRole("dialog");
@@ -42,6 +45,7 @@ test("同じユーザーIDでは登録できない", async ({ page }) => {
     await page.getByLabel("パスワード").fill("mochi-password-123");
     await page.getByRole("button", { name: "はじめる" }).click();
     if (attempt === 1) {
+      await page.getByRole("link", { name: "保存したので、はじめる →" }).click();
       await expect(page).toHaveURL(/\/lobby/);
       await skipTour(page);
       await page.getByRole("button", { name: "アカウントのメニュー" }).click();

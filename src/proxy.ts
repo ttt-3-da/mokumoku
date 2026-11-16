@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/terms", "/privacy"];
+const PUBLIC_PATHS = ["/login", "/reset", "/terms", "/privacy"];
 
 /**
  * 1. Supabase のセッション（Cookie）を毎リクエストで更新する

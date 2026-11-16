@@ -62,6 +62,9 @@ function SignInForm({ next }: { next: string }) {
       <Button type="submit" disabled={pending}>
         {pending ? "ログイン中…" : "ログイン"}
       </Button>
+      <Link href="/reset" className="text-center text-sm text-ink-soft underline">
+        パスワードを忘れた？
+      </Link>
     </form>
   );
 }
@@ -104,7 +107,7 @@ function SignUpForm() {
         />
       </Field>
       <p className="text-xs leading-relaxed text-ink-soft">
-        メールアドレスは使いません。そのぶん、パスワードを忘れると再設定できないので大切に保管してください。
+        メールアドレスは使いません。パスワードを忘れたときのために、登録のあとで「復活コード」を作ります。
       </p>
       <p className="text-xs leading-relaxed text-ink-soft">
         「はじめる」を押すと、

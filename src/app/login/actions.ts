@@ -71,7 +71,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     return { ...keep, error: "登録はできましたが、ログインできませんでした。管理者に連絡してください" };
   }
 
-  redirect("/lobby?tour=1");
+  redirect("/recovery-code?welcome=1");
 }
 
 export async function signOut() {

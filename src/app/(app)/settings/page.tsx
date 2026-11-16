@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BlockButton } from "@/components/block-button";
 import { InstallApp } from "@/components/install-app";
 import { Mochi } from "@/components/mochi";
+import { RecoveryCodeMaker } from "@/components/recovery-code";
 import { Card } from "@/components/ui";
 import { parseAvatar } from "@/lib/avatar";
 import { createClient, requireProfile } from "@/lib/supabase/server";
@@ -10,9 +11,15 @@ import { ColorSchemeForm, DeleteAccountForm, GoalForm, PasswordForm, ProfileForm
 
 export const metadata: Metadata = { title: "設定" };
 
+const dateFormat = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "numeric", day: "numeric" });
+
 export default async function SettingsPage() {
   const me = await requireProfile();
-  const { data: blockData } = await (await createClient()).rpc("list_blocks");
+  const supabase = await createClient();
+  const [{ data: blockData }, { data: recoveryCreatedAt }] = await Promise.all([
+    supabase.rpc("list_blocks"),
+    supabase.rpc("recovery_code_created_at"),
+  ]);
   const blocks = (blockData ?? []) as { username: string; display_name: string; avatar: unknown }[];
 
   return (
@@ -86,6 +93,17 @@ export default async function SettingsPage() {
       <Card>
         <h2 className="mb-3 font-bold">パスワード変更</h2>
         <PasswordForm username={me.username} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-bold">🔑 復活コード</h2>
+        <p className="mb-3 text-xs text-ink-soft">
+          パスワードを忘れたとき、ログイン画面の「パスワードを忘れた？」から、ユーザーIDと復活コードで新しいパスワードを決められます。
+          {recoveryCreatedAt
+            ? `（${dateFormat.format(new Date(recoveryCreatedAt))} に作ったコードが使えます。なくしたときは作り直してください）`
+            : "まだ作っていません。作っておきましょう。"}
+        </p>
+        <RecoveryCodeMaker username={me.username} hasCode={Boolean(recoveryCreatedAt)} />
       </Card>
 
       <Card className="border-red-200">

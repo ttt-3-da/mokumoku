@@ -28,14 +28,16 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
   const avatar = await getAvatar(me.id);
   const now = new Date();
   const monday = isMondayInJapan(now);
-  const [publicRes, mineRes, activityRes, progressRes, upcomingRes, summaryRes] = await Promise.all([
+  const [publicRes, mineRes, activityRes, progressRes, upcomingRes, summaryRes, recoveryRes] = await Promise.all([
     supabase.rpc("list_public_rooms", { p_query: q || null, p_tag: tag || null }),
     supabase.rpc("list_my_rooms"),
     supabase.rpc("list_following_activity"),
     supabase.rpc("get_weekly_progress"),
     supabase.rpc("list_upcoming_schedules"),
     monday ? supabase.rpc("last_week_summary") : Promise.resolve({ data: null }),
+    supabase.rpc("recovery_code_created_at"),
   ]);
+  const needsRecoveryCode = !recoveryRes.error && !recoveryRes.data;
   const progress = parseWeeklyProgress(progressRes.data);
   const upcoming = (upcomingRes.data ?? []) as UpcomingSchedule[];
   const summary = parseLastWeekSummary(summaryRes.data);
@@ -75,6 +77,17 @@ export default async function LobbyPage({ searchParams }: PageProps<"/lobby">) {
           ＋ 部屋をつくる
         </ButtonLink>
       </div>
+
+      {needsRecoveryCode && (
+        <Link href="/recovery-code" className="flex items-center gap-3 rounded-3xl border border-accent bg-paper px-5 py-3 text-sm hover:bg-cream">
+          <span aria-hidden className="text-xl">🔑</span>
+          <span>
+            <b>パスワードを忘れたときのために、復活コードを作っておこう</b>
+            <span className="block text-xs text-ink-soft">メールアドレスがなくても、ユーザーIDと復活コードで新しいパスワードにできます。</span>
+          </span>
+          <span aria-hidden className="ml-auto text-ink-soft">→</span>
+        </Link>
+      )}
 
       {!filtering && (
         <div className="flex flex-wrap items-center gap-3 rounded-3xl bg-sakura/20 px-5 py-4">

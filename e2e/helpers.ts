@@ -12,6 +12,9 @@ export async function signUp(page: Page, username = uniqueUsername(), displayNam
   await page.getByLabel("表示名").fill(displayName);
   await page.getByLabel("パスワード").fill("mochi-password-123");
   await page.getByRole("button", { name: "はじめる" }).click();
+  // 登録の直後は復活コードの画面。作らずに先へ進む（作る流れは recovery-code.spec.ts）
+  await expect(page).toHaveURL(/\/recovery-code/);
+  await page.getByRole("link", { name: "保存したので、はじめる →" }).click();
   await expect(page).toHaveURL(/\/lobby/);
   await skipTour(page);
   return username;
