@@ -11,6 +11,7 @@ import type { RoomOwner, RoomPreview } from "@/lib/types";
 import { OfficialBadge } from "@/components/official-badge";
 import Link from "next/link";
 import { InviteLink } from "@/components/invite-link";
+import { DeleteRoomFromEntry } from "@/components/delete-room";
 import { EnterForm } from "./enter-form";
 import { PendingWatcher } from "./pending-watcher";
 
@@ -152,6 +153,8 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
           <EnterForm roomId={room.id} history={history} inviteCode={inviteCode} />
         </Card>
       )}
+
+      {room.owner_id === me.id && <DeleteRoomFromEntry roomId={room.id} roomName={room.name} />}
     </div>
   );
 }
