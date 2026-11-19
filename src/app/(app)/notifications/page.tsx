@@ -94,7 +94,7 @@ function NotificationBody({ n }: { n: NotificationRow }) {
     return (
       <>
         <span className="flex h-11 w-11 shrink-0 items-center justify-center text-3xl" aria-hidden>
-          💌
+          💬
         </span>
         <p className="min-w-0 flex-1 text-sm">
           <span className="text-xs font-bold text-ink-soft">運営から、あなたのフィードバックへの返信</span>

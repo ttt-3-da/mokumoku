@@ -40,7 +40,7 @@ export default async function FeedbackPage() {
                   <p className="whitespace-pre-wrap break-words">{f.body}</p>
                   {f.reply ? (
                     <div className="rounded-xl bg-sakura/15 px-3 py-2">
-                      <span className="text-xs font-bold text-ink-soft">💌 運営からの返信（{dateText(f.replied_at!)}）</span>
+                      <span className="text-xs font-bold text-ink-soft">💬 運営からの返信（{dateText(f.replied_at!)}）</span>
                       <p className="whitespace-pre-wrap break-words">{f.reply}</p>
                     </div>
                   ) : (
