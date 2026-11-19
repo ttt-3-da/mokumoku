@@ -106,6 +106,8 @@ export default function TermsPage() {
       <Section title="お問い合わせ">
         <p>本規約についての質問は、ログイン後の「意見箱」から送ってください。</p>
       </Section>
+
+      <p className="text-xs text-ink-soft">※この生成にはAIを使用しております</p>
     </LegalPage>
   );
 }
