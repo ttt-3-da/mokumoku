@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(10);
+select plan(14);
 
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000024a1', 'fra@users.mokumoku.invalid', '{"username":"fra"}'),
@@ -54,6 +54,20 @@ select is((select count(*)::int from my_requests where detail = 'もう一度お
 set local role authenticated;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000024c3","role":"authenticated"}', true);
 select is((select detail from public.list_notifications() where kind = 'feedback_request' limit 1), 'もう一度お願いします', 'お知らせの一覧に文が出る');
+
+
+-- 選んだ人だけに送る／まだ受け取っていない人に送る
+reset role;
+insert into auth.users (id, email, raw_user_meta_data) values
+  ('00000000-0000-0000-0000-0000000024e5', 'fre@users.mokumoku.invalid', '{"username":"fre"}');
+set local role authenticated;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000024a1","role":"authenticated"}', true);
+select throws_ok($$ select public.admin_send_feedback_request('こんにちは', 'pick', '{}') $$, 'P0001', 'invalid_audience', '選ぶときは1人以上');
+select is(public.admin_send_feedback_request('あなたにだけ', 'pick', array['00000000-0000-0000-0000-0000000024c3', '00000000-0000-0000-0000-0000000024d4']::uuid[]), 1,
+  '選んだ人にだけ届く（利用停止中の人はのぞく）');
+select is(public.admin_feedback_audience_count('not_yet') >= 1, true, 'まだ受け取っていない人を数えられる');
+select lives_ok($$ select public.admin_send_feedback_request('はじめまして', 'not_yet') $$, 'まだ受け取っていない人に送れる');
+reset role;
 
 select * from finish();
 rollback;

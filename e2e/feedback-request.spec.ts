@@ -60,3 +60,35 @@ test("管理者がフィードバックに返信すると、送った人のお�
   await expect(user).toHaveURL(/\/feedback$/);
   await expect(user.getByRole("region", { name: "あなたが送ったもの" })).toContainText(reply);
 });
+
+test("管理者は「人を選ぶ」で、選んだ人にだけお知らせを送れる", async ({ browser }) => {
+  const admin = await (await browser.newContext()).newPage();
+  const picked = await (await browser.newContext()).newPage();
+  const notPicked = await (await browser.newContext()).newPage();
+  const adminName = uniqueUsername("pa");
+  const pickedName = uniqueUsername("pp");
+  await signUp(admin, adminName, "選ぶもち");
+  await makeAdmin(adminName);
+  await signUp(picked, pickedName, "選ばれもち");
+  await signUp(notPicked, undefined, "見てるもち");
+
+  const message = `あなたにだけ聞きたいです ${Date.now()}`;
+  await admin.goto("/admin");
+  await admin.getByRole("tab", { name: "フィードバック" }).click();
+  await admin.getByLabel("お知らせの文").fill(message);
+  await admin.getByLabel("人を選ぶ").check();
+  await admin.getByLabel("送る人をさがす").fill(pickedName);
+  await admin.getByRole("checkbox", { name: /選ばれもち/ }).check();
+  await expect(admin.getByText("1人を選んでいます")).toBeVisible();
+  admin.once("dialog", (d) => {
+    expect(d.message()).toContain("「人を選ぶ」の 1人");
+    void d.accept();
+  });
+  await admin.getByRole("button", { name: "お知らせを送る" }).click();
+  await expect(admin.getByRole("status").filter({ hasText: "1人に送りました" })).toBeVisible();
+
+  await picked.goto("/notifications");
+  await expect(picked.getByRole("listitem").filter({ hasText: message })).toBeVisible();
+  await notPicked.goto("/notifications");
+  await expect(notPicked.getByText(message)).toHaveCount(0);
+});

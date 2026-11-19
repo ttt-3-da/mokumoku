@@ -97,7 +97,7 @@ export function AdminView({
         <UserList items={users} />
       ) : tab === "feedback" ? (
         <>
-          <FeedbackRequestForm />
+          <FeedbackRequestForm users={users} />
           <FeedbackList items={feedback} />
         </>
       ) : (
