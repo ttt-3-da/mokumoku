@@ -15,6 +15,8 @@ export type Bulge = { angle: number; dx: number; dy: number };
 /** square は角の丸い四角（スーパー楕円）。bulge があれば、そのまわりだけ出っ張る */
 export function bodyOutline(square: boolean, bulge?: Bulge | null): string {
   const pts: [number, number][] = [];
+  // 長く伸ばすほど、根もとも太くなる（細いツノのようにならない）
+  const spread = bulge ? SPREAD + Math.min(0.3, Math.hypot(bulge.dx, bulge.dy) / 220) : SPREAD;
   for (let i = 0; i < N; i++) {
     const t = (i / N) * Math.PI * 2;
     const c = Math.cos(t);
@@ -23,7 +25,7 @@ export function bodyOutline(square: boolean, bulge?: Bulge | null): string {
     let y = square ? CY + RY * Math.sign(s) * Math.abs(s) ** 0.4 : CY + RY * s;
     if (bulge) {
       const d = Math.atan2(Math.sin(t - bulge.angle), Math.cos(t - bulge.angle));
-      const w = Math.exp(-(d * d) / (2 * SPREAD * SPREAD));
+      const w = Math.exp(-(d * d) / (2 * spread * spread));
       x += w * bulge.dx;
       y += w * bulge.dy;
     }

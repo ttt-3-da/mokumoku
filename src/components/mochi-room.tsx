@@ -556,7 +556,7 @@ export function MochiRoom({ avatar, seed, username, displayName, isMe, wallpaper
 }
 
 /** 引っぱって伸びる長さの上限（もちの大きさに対して） */
-const STRETCH_MAX = 0.45;
+const STRETCH_MAX = 0.7; // 指が体からこれだけ離れるまでは伸びる（もちの大きさに対する割合。横に引くと2倍くらいまで伸びる）
 
 /**
  * もちの箱の中でつまんだ位置（px）を、Mochi の viewBox の中に直して、輪郭のどこか・何段目かを出す。
