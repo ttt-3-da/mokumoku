@@ -1,3 +1,4 @@
+import { execSync } from "node:child_process";
 import { expect, type Page } from "@playwright/test";
 
 export function uniqueUsername(prefix = "e2e"): string {
@@ -24,4 +25,26 @@ export async function signUp(page: Page, username = uniqueUsername(), displayNam
 export async function skipTour(page: Page) {
   await page.getByRole("dialog", { name: "ようこそ、Mokumoku へ！" }).getByRole("button", { name: "とばす" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
+}
+
+/**
+ * 投稿できるのは1分以上の記録だけ。テストで1分待たないよう、
+ * ローカルの Supabase で勉強を始めた時刻を30分前にずらす（キーはその場で supabase status から読む）
+ */
+export async function backdateSession(sessionId: string) {
+  const env = Object.fromEntries(
+    execSync("npx supabase status -o env", { encoding: "utf8" })
+      .split(/\r?\n/)
+      .map((l) => l.match(/^([A-Z_]+)="?(.*?)"?$/))
+      .filter((m): m is RegExpMatchArray => Boolean(m))
+      .map((m) => [m[1], m[2]]),
+  );
+  const url = env.API_URL;
+  if (!url || !/127\.0\.0\.1|localhost/.test(url)) throw new Error("ローカルの Supabase でだけ使える");
+  const res = await fetch(`${url}/rest/v1/study_sessions?id=eq.${sessionId}`, {
+    method: "PATCH",
+    headers: { apikey: env.SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ started_at: new Date(Date.now() - 30 * 60_000).toISOString() }),
+  });
+  expect(res.ok).toBe(true);
 }

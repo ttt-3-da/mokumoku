@@ -10,6 +10,7 @@ import { createClient, getAvatar, requireProfile } from "@/lib/supabase/server";
 import type { StudySession } from "@/lib/types";
 import { NoteForm } from "./note-form";
 import { PostForm } from "./post-form";
+import { ShareButtons } from "./share-buttons";
 
 export const metadata: Metadata = { title: "おつかれさま" };
 
@@ -163,6 +164,12 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
         <Card className="w-full">
           <PostForm sessionId={session.id} posted={Boolean(postRow)} isPublic={me.is_public} />
         </Card>
+      ) : null}
+      {minutes >= 1 ? (
+        <Card className="w-full">
+          <h2 className="mb-2 text-sm font-bold">🎉 記録をシェアする</h2>
+          <ShareButtons sessionId={session.id} minutes={minutes} shared={Boolean(session.shared_at)} />
+        </Card>
       ) : (
         <Card className="w-full text-center text-sm text-ink-soft">
           1分未満だったので、記録には残りません。
@@ -170,7 +177,8 @@ export default async function SessionDonePage({ params, searchParams }: PageProp
             ロビーへ戻る
           </ButtonLink>
         </Card>
-      )}    </div>
+      )}
+    </div>
   );
 }
 

@@ -59,7 +59,17 @@ const CONFETTI = [
   { x: 80, y: 30, dx: 16, dy: -20, rot: -150, c: "#ffb36b" },
 ];
 
-export function Mochi({
+export function Mochi(props: MochiProps) {
+  const uid = useId().replace(/:/g, "");
+  return <MochiArt {...props} uid={uid} />;
+}
+
+/**
+ * もちの絵そのもの（フックを使わない）。uid は SVG の中の id（グラデーション・切り抜き）がほかのもちとぶつからないための印。
+ * ふつうは Mochi を使う。記録カードの画像のように、React の画面の外で描くときだけ直接使う
+ */
+export function MochiArt({
+  uid,
   avatar = DEFAULT_AVATAR,
   size = 64,
   state = "idle",
@@ -72,8 +82,7 @@ export function Mochi({
   emote = null,
   className = "",
   label,
-}: MochiProps) {
-  const uid = useId().replace(/:/g, "");
+}: MochiProps & { uid: string }) {
   const color = COLORS[avatar.color] ?? COLORS.shiro;
   const form = avatar.form ?? "round";
   // 暗い体の色では、目や口を明るい色で描く
