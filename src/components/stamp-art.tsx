@@ -45,12 +45,16 @@ const POSES: Record<StampId, Pose> = {
     face: "smile",
     mouth: "open",
     front: (hand) => (
+      // 顔の前に手や線を置くと鼻やしわに見えるので、体の右上の外で手を合わせ、まわりに黄色い「ぱちっ」の線を出す
       <>
-        {hand(45, 78)}
-        {hand(55, 76)}
-        {motion("M36 70 l-5 -4")}
-        {motion("M64 68 l5 -4")}
-        {motion("M50 66 v-5")}
+        <g stroke="#f2b33d" strokeWidth={2.6} strokeLinecap="round">
+          <path d="M84 29 l1 -7" />
+          <path d="M93 35 l6 -4" />
+          <path d="M96 47 l7 0" />
+          <path d="M75 32 l-3 -6" />
+        </g>
+        {hand(79, 44, 5.4)}
+        {hand(86, 40, 5.4)}
       </>
     ),
   },
