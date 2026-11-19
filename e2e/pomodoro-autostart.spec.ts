@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { signUp } from "./helpers";
 
-test("ポモドーロの部屋は、作って入った時点でタイマーが動いている", async ({ page }) => {
+test("ポモドーロの部屋は、最初の1人が入った時点でタイマーが動いている", async ({ page }) => {
   await signUp(page, undefined, "ポモもち");
   await page.goto("/rooms/new");
   await page.getByLabel("部屋名").fill(`すぐ始まる部屋 ${Date.now()}`);
