@@ -12,6 +12,7 @@ import { OfficialBadge } from "@/components/official-badge";
 import Link from "next/link";
 import { InviteLink } from "@/components/invite-link";
 import { DeleteRoomFromEntry } from "@/components/delete-room";
+import { RoomInfoEditor } from "@/components/room-info-editor";
 import { EnterForm } from "./enter-form";
 import { PendingWatcher } from "./pending-watcher";
 
@@ -76,6 +77,14 @@ export default async function RoomEntryPage({ params, searchParams }: PageProps<
             </div>
           </div>
         </div>
+        {room.owner_id === me.id && !room.closed_at && (
+          <details className="rounded-xl bg-cream px-3 py-2 text-sm">
+            <summary className="cursor-pointer font-bold">✏️ 部屋の名前・説明・タグを変える</summary>
+            <div className="mt-2">
+              <RoomInfoEditor room={room} />
+            </div>
+          </details>
+        )}
         {room.owner_id !== me.id && <ReportButton targetType="room" targetId={room.id} className="self-end" />}
         {me.is_admin && (
           <AdminActions

@@ -113,7 +113,7 @@ test("オーナーはあとから部屋の情報を変えられ、削除する�
   await expect(guest.getByText(/404|見つかりません|This page could not be found/).first()).toBeVisible();
 });
 
-test("オーナーは入室する前の画面からも部屋を削除でき、ロビーに戻る", async ({ page }) => {
+test("オーナーは入室する前の画面からも部屋の情報を変えたり、部屋を削除したりでき、消すとロビーに戻る", async ({ page }) => {
   await signUp(page, undefined, "まえけすもち");
   const name = `入る前に消す部屋 ${Date.now()}`;
   await page.goto("/rooms/new");
@@ -121,6 +121,13 @@ test("オーナーは入室する前の画面からも部屋を削除でき、�
   await page.getByRole("button", { name: "部屋をつくる" }).click();
   await expect(page).toHaveURL(/\/rooms\/[0-9a-f-]{36}$/);
   const entryUrl = page.url();
+
+  await page.getByText("✏️ 部屋の名前・説明・タグを変える").click();
+  const renamed = `入る前に変えた部屋 ${Date.now()}`;
+  await page.getByLabel("部屋名").fill(renamed);
+  await page.getByRole("button", { name: "部屋の情報を保存" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "部屋の情報を保存しました" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: renamed })).toBeVisible();
 
   const del = page.getByRole("region", { name: "部屋の削除" });
   await del.getByRole("button", { name: "部屋を削除する…" }).click();
