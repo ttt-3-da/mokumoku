@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button, inputClass } from "@/components/ui";
 import { rpcErrorMessage } from "@/lib/errors";
@@ -7,6 +8,7 @@ import { FEEDBACK_KINDS, FEEDBACK_MAX, type FeedbackKind } from "@/lib/feedback"
 import { createClient } from "@/lib/supabase/client";
 
 export function FeedbackForm() {
+  const router = useRouter();
   const [kind, setKind] = useState<FeedbackKind>("bug");
   const [body, setBody] = useState("");
   const [pending, start] = useTransition();
@@ -24,6 +26,7 @@ export function FeedbackForm() {
       }
       setBody("");
       setMessage({ ok: true, text: "送りました。ありがとうございます！" });
+      router.refresh();
     });
   }
 

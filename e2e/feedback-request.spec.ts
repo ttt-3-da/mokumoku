@@ -28,3 +28,35 @@ test("管理者が「フィードバックを送ってみませんか？」を�
   await item.getByRole("link", { name: "✉️ 意見箱を開く" }).click();
   await expect(user).toHaveURL(/\/feedback$/);
 });
+
+test("管理者がフィードバックに返信すると、送った人のお知らせと意見箱に返信が出る", async ({ browser }) => {
+  const admin = await (await browser.newContext()).newPage();
+  const user = await (await browser.newContext()).newPage();
+  const adminName = uniqueUsername("ra");
+  await signUp(admin, adminName, "返すもち");
+  await makeAdmin(adminName);
+  await signUp(user, uniqueUsername("ru"), "送るもち");
+
+  const body = `ダークモードがほしい ${Date.now()}`;
+  await user.goto("/feedback");
+  await user.locator("#feedback-body").fill(body);
+  await user.getByRole("button", { name: "送る", exact: true }).click();
+  await expect(user.getByText("送りました。ありがとうございます！")).toBeVisible();
+  await expect(user.getByRole("region", { name: "あなたが送ったもの" })).toContainText("まだ返信はありません");
+
+  const reply = `ありがとうございます、検討します ${Date.now()}`;
+  await admin.goto("/admin");
+  await admin.getByRole("tab", { name: "フィードバック" }).click();
+  const card = admin.getByRole("listitem").filter({ hasText: body });
+  await card.getByRole("button", { name: "↩️ 返信する" }).click();
+  await card.getByLabel("返信の文").fill(reply);
+  await card.getByRole("button", { name: "返信を送る" }).click();
+  await expect(card).toContainText("返信しました");
+
+  await user.goto("/notifications");
+  const item = user.getByRole("listitem").filter({ hasText: reply });
+  await expect(item).toContainText("あなたのフィードバックへの返信");
+  await item.getByRole("link", { name: "送った内容を見る" }).click();
+  await expect(user).toHaveURL(/\/feedback$/);
+  await expect(user.getByRole("region", { name: "あなたが送ったもの" })).toContainText(reply);
+});

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { AdminActions } from "@/components/admin-actions";
-import { Card } from "@/components/ui";
+import { Button, Card, inputClass } from "@/components/ui";
+import { rpcErrorMessage } from "@/lib/errors";
 import { feedbackKindLabel } from "@/lib/feedback";
 import { createClient } from "@/lib/supabase/client";
 import { FeedbackRequestForm } from "./feedback-request-form";
@@ -30,6 +31,8 @@ export type FeedbackRow = {
   read_at: string | null;
   username: string | null;
   display_name: string | null;
+  reply: string | null;
+  replied_at: string | null;
 };
 
 export type UserRow = {
@@ -180,6 +183,13 @@ function FeedbackList({ items }: { items: FeedbackRow[] }) {
             </div>
             <p className="whitespace-pre-wrap break-words text-sm">{f.body}</p>
             {f.page && <p className="truncate text-xs text-ink-soft">送る前のページ：{f.page}</p>}
+            {f.reply && (
+              <div className="rounded-xl bg-cream px-3 py-2 text-sm">
+                <span className="text-xs font-bold text-ink-soft">返信しました（{when(f.replied_at!)}）</span>
+                <p className="whitespace-pre-wrap break-words">{f.reply}</p>
+              </div>
+            )}
+            {f.username && <FeedbackReplyForm id={f.id} hasReply={Boolean(f.reply)} />}
             {!f.read_at && (
               <button
                 type="button"
@@ -199,6 +209,67 @@ function FeedbackList({ items }: { items: FeedbackRow[] }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** フィードバックに返信する。送った人のお知らせ（🔔）に届く */
+function FeedbackReplyForm({ id, hasReply }: { id: string; hasReply: boolean }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="self-start rounded-full bg-paper px-3 py-1 text-xs font-bold shadow-sm hover:bg-sakura/20"
+      >
+        {hasReply ? "↩️ もう一度返信する" : "↩️ 返信する"}
+      </button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        maxLength={500}
+        rows={3}
+        aria-label="返信の文"
+        placeholder="送った人のお知らせに届きます"
+        className={inputClass}
+      />
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-ink-soft">{text.trim().length}/500</span>
+        <Button variant="ghost" className="ml-auto !px-3 !py-1 text-xs" onClick={() => setOpen(false)} disabled={pending}>
+          やめる
+        </Button>
+        <Button
+          className="!px-3 !py-1 text-xs"
+          disabled={pending || text.trim().length === 0}
+          onClick={() =>
+            start(async () => {
+              setError(null);
+              const { error } = await createClient().rpc("admin_reply_feedback", { p_id: id, p_reply: text });
+              if (error) return setError(rpcErrorMessage(error));
+              setText("");
+              setOpen(false);
+              router.refresh();
+            })
+          }
+        >
+          {pending ? "送っています…" : "返信を送る"}
+        </Button>
+      </div>
+      {error && (
+        <p role="alert" className="text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 
