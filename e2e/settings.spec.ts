@@ -66,7 +66,7 @@ test("退会すると、ログイン画面に戻り、同じユーザーIDでは
   await expect(page.getByRole("alert").filter({ hasText: "ユーザーIDまたはパスワードが違います" })).toBeVisible();
 });
 
-test("オーナーが部屋を削除すると、いた人は記録画面へ移動し、部屋は開けなくなる", async ({ browser }) => {
+test("オーナーはあとから部屋の情報を変えられ、削除すると、いた人は記録画面へ移動し、部屋は開けなくなる", async ({ browser }) => {
   const owner = await (await browser.newContext()).newPage();
   const guest = await (await browser.newContext()).newPage();
   owner.on("dialog", (d) => void d.accept());
@@ -89,7 +89,21 @@ test("オーナーが部屋を削除すると、いた人は記録画面へ移�
   await expect(owner.getByText("いたもち")).toBeVisible({ timeout: 15_000 });
 
   await owner.getByRole("button", { name: "⚙️ 設定" }).click();
-  await owner.getByRole("button", { name: "部屋を削除" }).click();
+  // 部屋の情報をあとから変える
+  const settings = owner.getByRole("dialog", { name: "部屋の設定" });
+  const newName = `変えた部屋 ${Date.now()}`;
+  await settings.getByLabel("部屋名").fill(newName);
+  await settings.getByLabel("説明").fill("名前を変えました");
+  await settings.getByLabel("タグ").fill("英語 朝活");
+  await settings.getByRole("button", { name: "🌙" }).click();
+  await settings.getByRole("button", { name: "部屋の情報を保存" }).click();
+  await expect(settings.getByRole("status").filter({ hasText: "部屋の情報を保存しました" })).toBeVisible();
+  await expect(owner.getByRole("heading", { level: 1, name: newName })).toBeVisible();
+
+  // 削除は、押すと何が起きるかが出て、もう一度押して消す
+  await settings.getByRole("button", { name: "部屋を削除する…" }).click();
+  await expect(settings.getByText("元に戻せません")).toBeVisible();
+  await settings.getByRole("button", { name: "削除する", exact: true }).click();
 
   await expect(owner).toHaveURL(/removed=deleted-by-me/, { timeout: 15_000 });
   await expect(guest).toHaveURL(/removed=deleted/, { timeout: 15_000 });

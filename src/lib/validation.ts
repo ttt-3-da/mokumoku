@@ -82,18 +82,10 @@ function intInRange(raw: unknown, min: number, max: number): number | null {
   return n;
 }
 
-export function validateRoomInput(input: {
-  name: string;
-  description: string;
-  icon: string;
-  tags: string;
-  visibility: string;
-  capacity: unknown;
-  timer_mode: string;
-  focus_minutes: unknown;
-  break_minutes: unknown;
-  is_persistent: boolean;
-}): Result<RoomInput> {
+export type RoomInfo = Pick<RoomInput, "name" | "description" | "icon" | "tags">;
+
+/** 部屋の名前・説明・アイコン・タグ（作るときと、あとから変えるときの両方で使う） */
+export function validateRoomInfo(input: { name: string; description: string; icon: string; tags: string }): Result<RoomInfo> {
   const name = input.name.trim();
   if (charLength(name) < 1 || charLength(name) > 40) return ng("部屋名は1〜40文字にしてください");
 
@@ -107,6 +99,23 @@ export function validateRoomInput(input: {
   if (tags.some((t) => charLength(t) > TAG_MAX_LENGTH)) {
     return ng(`タグは1つ${TAG_MAX_LENGTH}文字以内にしてください`);
   }
+  return ok({ name, description, icon: input.icon, tags });
+}
+
+export function validateRoomInput(input: {
+  name: string;
+  description: string;
+  icon: string;
+  tags: string;
+  visibility: string;
+  capacity: unknown;
+  timer_mode: string;
+  focus_minutes: unknown;
+  break_minutes: unknown;
+  is_persistent: boolean;
+}): Result<RoomInput> {
+  const info = validateRoomInfo(input);
+  if (!info.ok) return info;
 
   if (!VISIBILITIES.includes(input.visibility as Visibility)) return ng("公開範囲が不正です");
   if (!TIMER_MODES.includes(input.timer_mode as TimerMode)) return ng("モードが不正です");
@@ -122,10 +131,7 @@ export function validateRoomInput(input: {
   }
 
   return ok({
-    name,
-    description,
-    icon: input.icon,
-    tags,
+    ...info.value,
     visibility: input.visibility as Visibility,
     capacity,
     timer_mode: input.timer_mode as TimerMode,

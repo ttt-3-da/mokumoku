@@ -1,15 +1,17 @@
 "use client";
 
 import { InviteLink } from "@/components/invite-link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Mochi } from "@/components/mochi";
-import { Button } from "@/components/ui";
+import { Button, inputClass } from "@/components/ui";
 import { parseAvatar, type Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/client";
 import { FREE_THEMES, ROOM_THEMES, type RoomTheme } from "@/lib/room-theme";
 import type { Room } from "@/lib/types";
+import { MAX_TAGS, ROOM_ICONS, validateRoomInfo } from "@/lib/validation";
 
 type Pending = { user_id: string; username: string; display_name: string; requested_at: string; avatar: Avatar };
 
@@ -87,13 +89,15 @@ export function OwnerMenu({
         <div className="flex flex-col gap-4 overflow-y-auto p-4 text-sm">
           {tab === "basic" && (
             <>
+              {isOwner && <RoomInfoEditor room={room} />}
               <div className="flex flex-col gap-1">
                 <span className="font-bold">招待リンク</span>
                 <InviteLink code={room.invite_code} roomName={room.name} />
               </div>
               {room.timer_mode === "pomodoro" && <TimerControl running={timerRunning} onStart={onStartTimer} />}
               <ScheduleEditor room={room} />
-              <DangerZone isOwner={isOwner} onEvacuate={onEvacuate} onDeleteRoom={onDeleteRoom} />
+              <Evacuate onEvacuate={onEvacuate} />
+              {isOwner && <DeleteRoom roomName={room.name} onDeleteRoom={onDeleteRoom} />}
             </>
           )}
           {tab === "members" && (
@@ -406,66 +410,159 @@ function Bans({ roomId }: { roomId: string }) {
     </div>
   );
 }
-/** 一斉退出（オーナー・モデレーター）と部屋の削除（オーナーのみ） */
-function DangerZone({
-  isOwner,
-  onEvacuate,
-  onDeleteRoom,
-}: {
-  isOwner: boolean;
-  onEvacuate: () => Promise<string | null>;
-  onDeleteRoom: () => Promise<string | null>;
-}) {
+/** 部屋の名前・説明・アイコン・タグを、作ったあとから変える（オーナーのみ） */
+function RoomInfoEditor({ room }: { room: Room }) {
+  const router = useRouter();
+  const [name, setName] = useState(room.name);
+  const [description, setDescription] = useState(room.description ?? "");
+  const [icon, setIcon] = useState(room.icon);
+  const [tags, setTags] = useState((room.tags ?? []).join(" "));
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const changed = name !== room.name || description !== (room.description ?? "") || icon !== room.icon || tags !== (room.tags ?? []).join(" ");
+
+  async function save() {
+    setMessage(null);
+    const v = validateRoomInfo({ name, description, icon, tags });
+    if (!v.ok) return setMessage({ ok: false, text: v.error });
+    setSaving(true);
+    const { error } = await createClient().from("rooms").update(v.value).eq("id", room.id);
+    setSaving(false);
+    if (error) return setMessage({ ok: false, text: error.message === "ng_word" ? rpcErrorMessage(error) : "保存できませんでした" });
+    setName(v.value.name);
+    setDescription(v.value.description);
+    setTags(v.value.tags.join(" "));
+    setMessage({ ok: true, text: "部屋の情報を保存しました" });
+    router.refresh();
+  }
+
+  const edit = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setMessage(null);
+  };
+
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="font-bold">部屋の情報</legend>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-ink-soft">部屋名（1〜40文字）</span>
+        <input value={name} onChange={(e) => edit(setName)(e.target.value)} maxLength={40} aria-label="部屋名" className={inputClass} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-ink-soft">説明（200文字以内）</span>
+        <textarea value={description} onChange={(e) => edit(setDescription)(e.target.value)} maxLength={200} rows={2} aria-label="説明" className={inputClass} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="text-xs text-ink-soft">タグ（スペースかカンマ区切りで{MAX_TAGS}個まで）</span>
+        <input value={tags} onChange={(e) => edit(setTags)(e.target.value)} aria-label="タグ" className={inputClass} />
+      </label>
+      <div className="flex flex-wrap gap-1" role="group" aria-label="アイコン">
+        {ROOM_ICONS.map((i) => (
+          <button
+            key={i}
+            type="button"
+            aria-pressed={icon === i}
+            onClick={() => edit(setIcon)(i)}
+            className={`flex h-9 w-9 items-center justify-center rounded-xl border text-lg ${icon === i ? "border-accent bg-sakura/20" : "border-line bg-paper hover:bg-sakura/10"}`}
+          >
+            {i}
+          </button>
+        ))}
+      </div>
+      <Button onClick={save} disabled={saving || !changed} className="self-end !px-4 !py-1.5">
+        {saving ? "保存中…" : "部屋の情報を保存"}
+      </Button>
+      {message && (
+        <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-green-700" : "text-red-600"}`}>
+          {message.text}
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+/** 一斉退出（オーナー・モデレーター） */
+function Evacuate({ onEvacuate }: { onEvacuate: () => Promise<string | null> }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
 
-  async function run(fn: () => Promise<string | null>, confirmText: string, okText: string) {
-    if (!window.confirm(confirmText)) return;
+  async function run() {
+    if (!window.confirm("あなた以外の全員を、この部屋から退室させますか？（記録はそれぞれに残ります）")) return;
     setBusy(true);
-    const error = await fn();
+    const error = await onEvacuate();
     setBusy(false);
-    setMessage(error ? { ok: false, text: error } : { ok: true, text: okText });
+    setMessage(error ? { ok: false, text: error } : { ok: true, text: "全員を退室させました" });
   }
 
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-red-200 bg-paper p-3">
-      <span className="font-bold text-red-700">部屋の管理</span>
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="secondary"
-          className="px-3 py-1 text-xs"
-          disabled={busy}
-          onClick={() =>
-            run(onEvacuate, "あなた以外の全員を、この部屋から退室させますか？（記録はそれぞれに残ります）", "全員を退室させました")
-          }
-        >
-          一斉退出
+    <div className="flex flex-col gap-1">
+      <span className="font-bold">一斉退出</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="secondary" className="px-3 py-1 text-xs" disabled={busy} onClick={run}>
+          全員を退室させる
         </Button>
-        {isOwner && (
-          <Button
-            variant="danger"
-            className="px-3 py-1 text-xs"
-            disabled={busy}
-            onClick={() =>
-              run(
-                onDeleteRoom,
-                "この部屋を削除しますか？全員が退室し、一覧や招待URLからも消えます。元に戻せません。（みんなの記録には「削除された部屋」として残ります）",
-                "部屋を削除しました",
-              )
-            }
-          >
-            部屋を削除
-          </Button>
-        )}
+        <span className="text-xs text-ink-soft">あなた以外の全員を退室させます。部屋は残ります。</span>
       </div>
-      <span className="text-xs text-ink-soft">
-        一斉退出は、あなた以外の全員を退室させます。{isOwner && "部屋の削除は、全員を退室させて部屋をなくします。"}
-      </span>
       {message && (
         <p role={message.ok ? "status" : "alert"} className={`text-xs ${message.ok ? "text-green-700" : "text-red-600"}`}>
           {message.text}
         </p>
       )}
     </div>
+  );
+}
+
+/** 部屋の削除（オーナーのみ）。押すと、何が起きるかを見せてから、もう一度押して消す */
+function DeleteRoom({ roomName, onDeleteRoom }: { roomName: string; onDeleteRoom: () => Promise<string | null> }) {
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function run() {
+    setBusy(true);
+    setError(null);
+    const e = await onDeleteRoom();
+    setBusy(false);
+    if (e) setError(e);
+  }
+
+  return (
+    <section aria-label="部屋の削除" className="flex flex-col gap-2 rounded-xl border-2 border-red-200 bg-red-50/60 p-3">
+      <span className="font-bold text-red-700">🗑️ この部屋を削除する</span>
+      {!open ? (
+        <>
+          <p className="text-xs text-ink-soft">部屋がいらなくなったら、ここから削除できます。</p>
+          <Button variant="danger" className="self-start px-4 py-1.5 text-sm" onClick={() => setOpen(true)}>
+            部屋を削除する…
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm">
+            「<b>{roomName}</b>」を削除すると：
+          </p>
+          <ul className="ml-4 list-disc text-xs text-ink">
+            <li>いま部屋にいる全員が退室になります</li>
+            <li>ロビーの一覧や招待リンクから入れなくなります</li>
+            <li>元に戻せません</li>
+            <li>みんなの勉強の記録は「削除された部屋」として残ります</li>
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="danger" className="px-4 py-1.5 text-sm" disabled={busy} onClick={run}>
+              {busy ? "削除しています…" : "削除する"}
+            </Button>
+            <Button variant="ghost" className="px-4 py-1.5 text-sm" disabled={busy} onClick={() => setOpen(false)}>
+              やめる
+            </Button>
+          </div>
+        </>
+      )}
+      {error && (
+        <p role="alert" className="text-xs text-red-600">
+          {error}
+        </p>
+      )}
+    </section>
   );
 }

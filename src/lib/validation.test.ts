@@ -6,6 +6,7 @@ import {
   validatePassword,
   validateBio,
   validateNote,
+  validateRoomInfo,
   validateRoomInput,
   validateTask,
   validateUsername,
@@ -91,6 +92,17 @@ describe("validateRoomInput", () => {
   it("自由モードではタイマー分数を検証せず既定値を入れる", () => {
     const r = validateRoomInput({ ...baseRoom, timer_mode: "free", focus_minutes: "", break_minutes: "" });
     expect(r.ok && r.value).toMatchObject({ focus_minutes: 25, break_minutes: 5 });
+  });
+});
+
+describe("validateRoomInfo（あとから部屋の情報を変えるとき）", () => {
+  it("名前・説明・アイコン・タグだけを整えて返す", () => {
+    const r = validateRoomInfo({ name: " 夜の部屋 ", description: " しずかに ", icon: "🌙", tags: "#英語、TOEIC 英語" });
+    expect(r.ok && r.value).toEqual({ name: "夜の部屋", description: "しずかに", icon: "🌙", tags: ["英語", "TOEIC"] });
+  });
+  it("空の名前はエラー", () => {
+    const r = validateRoomInfo({ name: "  ", description: "", icon: "🌙", tags: "" });
+    expect(r.ok).toBe(false);
   });
 });
 
