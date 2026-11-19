@@ -27,11 +27,8 @@ export async function skipTour(page: Page) {
   await expect(page.getByRole("dialog")).toHaveCount(0);
 }
 
-/**
- * 投稿できるのは1分以上の記録だけ。テストで1分待たないよう、
- * ローカルの Supabase で勉強を始めた時刻を30分前にずらす（キーはその場で supabase status から読む）
- */
-export async function backdateSession(sessionId: string) {
+/** ローカルの Supabase に、管理者の鍵（service role）で直接書く。テストの下準備だけに使う（キーはその場で supabase status から読む） */
+async function patchLocal(path: string, body: Record<string, unknown>) {
   const env = Object.fromEntries(
     execSync("npx supabase status -o env", { encoding: "utf8" })
       .split(/\r?\n/)
@@ -41,10 +38,20 @@ export async function backdateSession(sessionId: string) {
   );
   const url = env.API_URL;
   if (!url || !/127\.0\.0\.1|localhost/.test(url)) throw new Error("ローカルの Supabase でだけ使える");
-  const res = await fetch(`${url}/rest/v1/study_sessions?id=eq.${sessionId}`, {
+  const res = await fetch(`${url}/rest/v1/${path}`, {
     method: "PATCH",
     headers: { apikey: env.SERVICE_ROLE_KEY, Authorization: `Bearer ${env.SERVICE_ROLE_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ started_at: new Date(Date.now() - 30 * 60_000).toISOString() }),
+    body: JSON.stringify(body),
   });
   expect(res.ok).toBe(true);
+}
+
+/** 投稿できるのは1分以上の記録だけ。テストで1分待たないよう、勉強を始めた時刻を30分前にずらす */
+export async function backdateSession(sessionId: string) {
+  await patchLocal(`study_sessions?id=eq.${sessionId}`, { started_at: new Date(Date.now() - 30 * 60_000).toISOString() });
+}
+
+/** テスト用のユーザーを管理者にする */
+export async function makeAdmin(username: string) {
+  await patchLocal(`profiles?username=eq.${username}`, { is_admin: true });
 }

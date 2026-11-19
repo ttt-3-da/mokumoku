@@ -29,6 +29,8 @@ const MESSAGES: Record<string, string> = {
   forbidden: "この操作はオーナー・モデレーターだけができます",
   invalid_schedule: "定例の曜日と時刻を確かめてください",
   admin_only: "この操作は管理者だけができます",
+  invalid_message: "お知らせの文は1〜140文字にしてください",
+  invalid_audience: "送る相手を選んでください",
   invalid_profile_text: "表示名は1〜30文字、自己紹介は500文字以内にしてください",
   suspended: "このアカウントは利用停止中です",
   cannot_suspend_self: "自分を利用停止にはできません",

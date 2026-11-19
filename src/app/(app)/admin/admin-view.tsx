@@ -7,6 +7,7 @@ import { AdminActions } from "@/components/admin-actions";
 import { Card } from "@/components/ui";
 import { feedbackKindLabel } from "@/lib/feedback";
 import { createClient } from "@/lib/supabase/client";
+import { FeedbackRequestForm } from "./feedback-request-form";
 
 export type ReportRow = {
   target_type: "room" | "user" | "post";
@@ -92,7 +93,10 @@ export function AdminView({
       {tab === "users" ? (
         <UserList items={users} />
       ) : tab === "feedback" ? (
-        <FeedbackList items={feedback} />
+        <>
+          <FeedbackRequestForm />
+          <FeedbackList items={feedback} />
+        </>
       ) : (
         <ReportList items={tab === "open" ? openReports : doneReports} resolved={tab === "done"} />
       )}

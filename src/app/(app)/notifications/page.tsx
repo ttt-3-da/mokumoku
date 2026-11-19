@@ -90,6 +90,23 @@ function NotificationBody({ n }: { n: NotificationRow }) {
       </>
     );
   }
+  if (n.kind === "feedback_request") {
+    return (
+      <>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-3xl" aria-hidden>
+          📮
+        </span>
+        <p className="min-w-0 flex-1 text-sm">
+          <span className="text-xs font-bold text-ink-soft">運営より</span>
+          <span className="block whitespace-pre-wrap break-words">{n.detail}</span>
+          <Link href="/feedback" className="mt-1 inline-block font-bold text-accent-strong hover:underline">
+            ✉️ 意見箱を開く
+          </Link>
+          <When n={n} />
+        </p>
+      </>
+    );
+  }
   if (!n.actor_username || !n.actor_avatar) return null;
   if (n.kind === "post_reaction") {
     const stamp = n.detail?.split(":")[1];
