@@ -13,6 +13,7 @@ export type Profile = {
   is_public: boolean;
   /** false なら学習の統計を本人以外に見せない */
   stats_public: boolean;
+  hidden_sections?: string[];
   /** 週の目標（分）。決めていなければ null */
   weekly_goal_minutes: number | null;
   /** 公式（管理者）アカウント */

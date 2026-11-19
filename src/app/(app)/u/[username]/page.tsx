@@ -18,7 +18,8 @@ import { plantLevel } from "@/lib/room-theme";
 import type { ProfileStats } from "@/lib/stats";
 import { createClient, getAvatar, getUnlocks, requireProfile } from "@/lib/supabase/server";
 import type { Profile } from "@/lib/types";
-import { ProfileStatsView } from "./profile-stats";
+import { SectionVisibility } from "@/components/section-visibility";
+import { ProfileStatsView, type SectionWrap } from "./profile-stats";
 
 const BADGE_COUNT = BADGE_IDS.length;
 
@@ -35,7 +36,7 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   // 非公開のプロフィールは RLS で本人以外には返らない
   const { data } = await supabase
     .from("profiles")
-    .select("id, username, display_name, created_at, bio, is_public, stats_public, is_admin, suspended_at")
+    .select("id, username, display_name, created_at, bio, is_public, stats_public, hidden_sections, is_admin, suspended_at")
     .eq("username", username.toLowerCase())
     .maybeSingle();
   if (!data) return <NotAvailable />;
@@ -59,6 +60,47 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
   // ブロックされている人のプロフィールは見られない（管理者は別）
   if (follow?.blocked_by && !me.is_admin) return <NotAvailable />;
   const stats = statsData as ProfileStats | null;
+
+  // 本人には項目ごとの「みんなに公開／自分だけ」の切りかえを付ける。ほかの人には隠した項目を出さない
+  const hiddenSections = new Set(profile.hidden_sections ?? []);
+  const wrap: SectionWrap = (key, label, node) => {
+    if (isMe) {
+      return (
+        <SectionVisibility section={key} label={label} initialHidden={hiddenSections.has(key)}>
+          {node}
+        </SectionVisibility>
+      );
+    }
+    return hiddenSections.has(key) ? null : node;
+  };
+
+  const badgesCard = (
+    <Card>
+      <h2 className="mb-3 font-bold">
+        実績バッジ
+        <span className="ml-2 text-sm font-normal text-ink-soft tabular-nums">
+          {badges.size} / {BADGE_COUNT}
+        </span>
+      </h2>
+      <BadgeGrid earned={badges} />
+    </Card>
+  );
+  const itemsCard = (
+    <Card>
+      <h2 className="mb-3 font-bold">集めたアイテム</h2>
+      <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+        {Object.entries(UNLOCKABLE_ITEMS).map(([id, condition]) => {
+          const got = unlocks.includes(id);
+          return (
+            <li key={id} className={`rounded-2xl px-3 py-2 ${got ? "bg-sakura/15" : "bg-cream text-ink-soft"}`}>
+              <span aria-hidden>{got ? "🎁" : "🔒"}</span> {UNLOCK_ITEM_LABEL[id as keyof typeof UNLOCK_ITEM_LABEL]}
+              <span className="block text-[11px] text-ink-soft">{condition}</span>
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
+  );
 
   const joined = new Date(profile.created_at).toLocaleDateString("ja-JP", {
     timeZone: "Asia/Tokyo",
@@ -149,38 +191,16 @@ export default async function ProfilePage({ params }: PageProps<"/u/[username]">
         )}
       </Card>
 
-      {progress && <WeeklyGoalBar progress={progress} isMe={isMe} />}
+      {progress && wrap("goal", "週の目標", <WeeklyGoalBar progress={progress} isMe={isMe} />)}
 
       {stats ? (
-        <ProfileStatsView stats={stats} />
+        <ProfileStatsView stats={stats} wrap={wrap} />
       ) : (
         <Card className="text-center text-sm text-ink-soft">学習の統計は非公開です。</Card>
       )}
 
-      <Card>
-        <h2 className="mb-3 font-bold">
-          実績バッジ
-          <span className="ml-2 text-sm font-normal text-ink-soft tabular-nums">
-            {badges.size} / {BADGE_COUNT}
-          </span>
-        </h2>
-        <BadgeGrid earned={badges} />
-      </Card>
-
-      <Card>
-        <h2 className="mb-3 font-bold">集めたアイテム</h2>
-        <ul className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-          {Object.entries(UNLOCKABLE_ITEMS).map(([id, condition]) => {
-            const got = unlocks.includes(id);
-            return (
-              <li key={id} className={`rounded-2xl px-3 py-2 ${got ? "bg-sakura/15" : "bg-cream text-ink-soft"}`}>
-                <span aria-hidden>{got ? "🎁" : "🔒"}</span> {UNLOCK_ITEM_LABEL[id as keyof typeof UNLOCK_ITEM_LABEL]}
-                <span className="block text-[11px] text-ink-soft">{condition}</span>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
+      {wrap("badges", "実績バッジ", badgesCard)}
+      {wrap("items", "集めたアイテム", itemsCard)}
     </div>
   );
 }

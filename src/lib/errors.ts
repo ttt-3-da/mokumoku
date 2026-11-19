@@ -31,6 +31,7 @@ const MESSAGES: Record<string, string> = {
   admin_only: "この操作は管理者だけができます",
   invalid_message: "お知らせの文は1〜140文字にしてください",
   invalid_audience: "送る相手を選んでください",
+  invalid_section: "その項目は切りかえられません",
   invalid_reply: "返信は1〜500文字にしてください",
   feedback_not_found: "そのフィードバックは見つかりません",
   user_gone: "送った人が退会しているので、返信できません",

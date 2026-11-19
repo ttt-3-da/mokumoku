@@ -9,17 +9,28 @@ const GRASS = ["var(--line)", "#d3e8c9", "#a8d197", "#73ad62", "#437a37"] as con
  * プロフィールの統計：今週の合計・連続日数・累計、週グラフ、草カレンダー、タグ別の割合。
  * グラフは系列が1つなので凡例は付けず、各要素にツールチップ（title）と読み上げ用ラベルを付ける。
  */
-export function ProfileStatsView({ stats }: { stats: ProfileStats }) {
+export type SectionWrap = (key: string, label: string, node: React.ReactNode) => React.ReactNode;
+
+/**
+ * 項目ごとに見せる・見せないを切りかえられる。ほかの人が見るときは、隠した項目はサーバーから来ないので出さない。
+ * wrap は本人のとき、切りかえボタンを付ける
+ */
+export function ProfileStatsView({ stats, wrap = (_k, _l, n) => n }: { stats: ProfileStats; wrap?: SectionWrap }) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-3 gap-3">
-        <StatTile label="今週の合計" value={formatMinutes(stats.week_minutes)} />
-        <StatTile label="連続日数" value={`${stats.streak_days}日`} />
-        <StatTile label="累計" value={formatMinutes(stats.total_minutes)} sub={`${stats.total_sessions}回・🍅${stats.total_pomodoros}`} />
-      </div>
-      <WeekChart stats={stats} />
-      <GrassCalendar stats={stats} />
-      <TagShares stats={stats} />
+      {"total_minutes" in stats &&
+        wrap(
+          "totals",
+          "今週の合計・連続日数・累計",
+          <div className="grid grid-cols-3 gap-3">
+            <StatTile label="今週の合計" value={formatMinutes(stats.week_minutes)} />
+            <StatTile label="連続日数" value={`${stats.streak_days}日`} />
+            <StatTile label="累計" value={formatMinutes(stats.total_minutes)} sub={`${stats.total_sessions}回・🍅${stats.total_pomodoros}`} />
+          </div>,
+        )}
+      {"week" in stats && wrap("week", "今週の学習時間", <WeekChart stats={stats} />)}
+      {"calendar" in stats && wrap("grass", "草カレンダー", <GrassCalendar stats={stats} />)}
+      {"tags" in stats && wrap("tags", "タグ別の割合", <TagShares stats={stats} />)}
     </div>
   );
 }
