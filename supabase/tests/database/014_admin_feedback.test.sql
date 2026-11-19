@@ -3,6 +3,8 @@ begin;
 create extension if not exists pgtap with schema extensions;
 
 select plan(13);
+-- E2E で手元に残ったフィードバックで数がずれないように（最後に rollback で戻る）
+delete from public.feedback;
 
 create or replace function pg_temp.login(p_id uuid) returns void language sql as $$
   select set_config('role', 'authenticated', true),

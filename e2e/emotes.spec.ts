@@ -22,7 +22,7 @@ test("エモートをすると、同じ部屋のほかの人の画面でもも�
   await expect(b.getByText("● 接続中")).toBeVisible({ timeout: 15_000 });
   await expect(a.getByText("うごくもち")).toBeVisible({ timeout: 15_000 });
 
-  // ポモドーロの部屋（タイマー前）でもエモートは使える
+  // ポモドーロの部屋（集中中）でもエモートは使える
   await b.getByRole("button", { name: "🎭 エモート" }).click();
   await b.getByRole("button", { name: "よろしく" }).click();
 
