@@ -90,6 +90,20 @@ function NotificationBody({ n }: { n: NotificationRow }) {
       </>
     );
   }
+  if (n.kind === "announcement") {
+    return (
+      <>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-3xl" aria-hidden>
+          📢
+        </span>
+        <p className="min-w-0 flex-1 text-sm">
+          <span className="text-xs font-bold text-ink-soft">運営からのお知らせ</span>
+          <span className="block whitespace-pre-wrap break-words">{n.detail}</span>
+          <When n={n} />
+        </p>
+      </>
+    );
+  }
   if (n.kind === "feedback_reply") {
     return (
       <>

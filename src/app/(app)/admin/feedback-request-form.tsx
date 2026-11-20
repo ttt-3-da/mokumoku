@@ -15,9 +15,34 @@ const AUDIENCES = [
 ] as const;
 type Audience = (typeof AUDIENCES)[number]["value"];
 
-/** みんなのお知らせ（🔔）に「フィードバックを送ってみませんか？」を送る。押すと意見箱が開く */
+const KINDS = {
+  feedback: {
+    label: "📮 フィードバックのお願い",
+    hint: "押すと意見箱が開きます。",
+    max: 140,
+    rpc: "admin_send_feedback_request",
+    defaultMessage: DEFAULT_MESSAGE,
+  },
+  announcement: {
+    label: "📢 運営からのお知らせ",
+    hint: "直したことや新しい機能を伝えます。",
+    max: 300,
+    rpc: "admin_send_announcement",
+    defaultMessage:
+      "【直しました】ほかのタブで調べものをしていると、部屋から落ちてしまうことがありました。今は、ほかのタブを見ていても15分までは集中中のままで、勉強時間にも入ります（15分をこえると離席中になります）。もし落ちてしまっても、画面に戻れば同じ部屋に入り直せます。",
+  },
+} as const;
+type Kind = keyof typeof KINDS;
+
+/**
+ * みんなのお知らせ（🔔）に送る。種類は「フィードバックのお願い」（押すと意見箱が開く）と
+ * 「運営からのお知らせ」（直したこと・新しい機能など）
+ */
 export function FeedbackRequestForm({ users }: { users: UserRow[] }) {
-  const [message, setMessage] = useState(DEFAULT_MESSAGE);
+  const [kind, setKind] = useState<Kind>("feedback");
+  const [message, setMessage] = useState<string>(DEFAULT_MESSAGE);
+  const k = KINDS[kind];
+  const audiences = kind === "announcement" ? AUDIENCES.filter((a) => a.value !== "not_yet") : AUDIENCES;
   const [audience, setAudience] = useState<Audience>("active");
   const [picked, setPicked] = useState<string[]>([]);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -32,7 +57,7 @@ export function FeedbackRequestForm({ users }: { users: UserRow[] }) {
       const label = AUDIENCES.find((a) => a.value === audience)!.label;
       if (count === 0) return setResult({ ok: false, text: `「${label}」に当てはまる人がいません。` });
       if (!window.confirm(`「${label}」の ${count}人 のお知らせに送ります。よろしいですか？（取り消せません）`)) return;
-      const { data, error } = await supabase.rpc("admin_send_feedback_request", {
+      const { data, error } = await supabase.rpc(k.rpc, {
         p_message: message,
         p_audience: audience,
         p_user_ids: audience === "pick" ? picked : null,
@@ -44,23 +69,42 @@ export function FeedbackRequestForm({ users }: { users: UserRow[] }) {
 
   return (
     <Card className="flex flex-col gap-3">
-      <h2 className="font-bold">📮 フィードバックをお願いする</h2>
-      <p className="text-xs text-ink-soft">みんなのお知らせ（🔔）に届きます。押すと意見箱が開きます。</p>
+      <h2 className="font-bold">🔔 お知らせを送る</h2>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="お知らせの種類">
+        {(Object.keys(KINDS) as Kind[]).map((id) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={kind === id}
+            onClick={() => {
+              setKind(id);
+              setMessage(KINDS[id].defaultMessage);
+              if (id === "announcement" && audience === "not_yet") setAudience("all");
+              setResult(null);
+            }}
+            className={`rounded-full px-3 py-1 text-sm ${kind === id ? "bg-ink font-bold text-paper" : "bg-paper hover:bg-sakura/20"}`}
+          >
+            {KINDS[id].label}
+          </button>
+        ))}
+      </div>
+      <p className="text-xs text-ink-soft">みんなのお知らせ（🔔）に届きます。{k.hint}</p>
       <label className="flex flex-col gap-1 text-sm">
         <span className="font-bold">お知らせの文</span>
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          maxLength={140}
-          rows={3}
+          maxLength={k.max}
+          rows={kind === "announcement" ? 5 : 3}
           className={inputClass}
           aria-label="お知らせの文"
         />
-        <span className="self-end text-xs text-ink-soft">{message.trim().length}/140</span>
+        <span className="self-end text-xs text-ink-soft">{message.trim().length}/{k.max}</span>
       </label>
       <fieldset className="flex flex-wrap gap-4 text-sm">
         <legend className="mb-1 font-bold">送る相手</legend>
-        {AUDIENCES.map((a) => (
+        {audiences.map((a) => (
           <label key={a.value} className="flex items-center gap-1.5">
             <input type="radio" name="audience" value={a.value} checked={audience === a.value} onChange={() => setAudience(a.value)} />
             {a.label}
