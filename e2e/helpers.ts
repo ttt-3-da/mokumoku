@@ -55,3 +55,10 @@ export async function backdateSession(sessionId: string) {
 export async function makeAdmin(username: string) {
   await patchLocal(`profiles?username=eq.${username}`, { is_admin: true });
 }
+
+/** ローカルの Supabase で SQL を直接動かす（テストの下準備だけに使う。--remote は付けない） */
+export function runLocalSql(sql: string) {
+  const out = execSync(`npx supabase db query ${JSON.stringify(sql)} 2>&1`, { encoding: "utf8" });
+  if (!/Target: local/.test(out)) throw new Error("ローカルの Supabase でだけ使える");
+  return out;
+}

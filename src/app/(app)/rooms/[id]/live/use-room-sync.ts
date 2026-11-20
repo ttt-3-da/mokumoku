@@ -39,10 +39,19 @@ export function beatNow() {
   window.dispatchEvent(new Event(BEAT_NOW_EVENT));
 }
 
-type HeartbeatResult = { session_id: string; room_id: string; timer_started_at: string | null };
+type HeartbeatResult = {
+  session_id: string;
+  room_id: string;
+  timer_started_at: string | null;
+  /** 15分をこえて離れてから戻った：記録が区切られ、同じ部屋で新しい記録が始まった */
+  split?: boolean;
+  /** 15分をこえて離れていた間に満員などになり、戻れなかった */
+  lost?: boolean;
+};
 
 /**
- * 60秒ごとにハートビートを送る（タブが非表示でも送る。ほかのタブを見ている間も学習時間に含めるため）。
+ * 60秒ごとにハートビートを送る（タブが非表示でも送る。ほかのタブを見ている間も15分までは学習時間に含めるため）。
+ * タブが見えなくなったら /api/hidden に知らせる（見えない間はブラウザがハートビートを止めることがあるので、サーバーは35分まで待つ）。
  * タブを閉じると /api/leaving に知らせ、30秒戻らなければ cron が閉じる（知らせが届かなくても3分後に閉じる）。
  * - task が変わったらすぐに送って DB にも保存する
  * - セッションがもう閉じられていたら onLost を呼ぶ
@@ -53,6 +62,7 @@ export function useHeartbeat({
   enabled,
   onBeat,
   onLost,
+  onSplit,
   onAccountSwitched,
   getIdleSeconds,
 }: {
@@ -63,13 +73,15 @@ export function useHeartbeat({
   enabled: boolean;
   onBeat: (r: HeartbeatResult) => void;
   onLost: () => void;
+  /** 15分をこえて離れてから戻り、記録が区切られた */
+  onSplit: () => void;
   /** 同じブラウザの別タブで、別のユーザーにログインし直された */
   onAccountSwitched: () => void;
 }) {
-  const cbRef = useRef({ onBeat, onLost, onAccountSwitched, getIdleSeconds });
+  const cbRef = useRef({ onBeat, onLost, onSplit, onAccountSwitched, getIdleSeconds });
   const taskRef = useRef(task);
   useEffect(() => {
-    cbRef.current = { onBeat, onLost, onAccountSwitched, getIdleSeconds };
+    cbRef.current = { onBeat, onLost, onSplit, onAccountSwitched, getIdleSeconds };
   });
 
   // ログイン情報（Cookie）はタブ間で共有される。別タブで別のユーザーにログインすると、
@@ -98,6 +110,7 @@ export function useHeartbeat({
       const { data, error } = await createClient().rpc("heartbeat", {
         p_task: withTask,
         p_idle_seconds: cbRef.current.getIdleSeconds(),
+        p_hidden: document.visibilityState === "hidden",
       });
       if (stopped) return;
       if (error) {
@@ -107,7 +120,18 @@ export function useHeartbeat({
         }
         return; // 通信エラーは次の回に任せる
       }
-      cbRef.current.onBeat(data as HeartbeatResult);
+      const result = data as HeartbeatResult;
+      if (result.lost) {
+        stopped = true;
+        cbRef.current.onLost();
+        return;
+      }
+      if (result.split) {
+        stopped = true;
+        cbRef.current.onSplit();
+        return;
+      }
+      cbRef.current.onBeat(result);
     }
 
     // 「今やること」が変わったときだけ task 付きで送る
@@ -115,6 +139,9 @@ export function useHeartbeat({
     taskRef.current = task;
     // 開いたとき（再読み込みを含む）もすぐ送る。閉じるときの「出ていった」を取り消すため
     void beat(taskChanged ? task : null);
+    // 再読み込みでは、前の画面の「出ていった」「見えなくなった」の知らせが、あとから届くことがある。
+    // 少しあとにもう1回送って、それを取り消す
+    const settle = setTimeout(() => void beat(null), 5_000);
 
     const id = setInterval(() => void beat(null), HEARTBEAT_MS);
     // タブを閉じる・ほかのサイトへ移るとき：「出ていった」と知らせる（30秒戻らなければ退室になる）
@@ -126,9 +153,18 @@ export function useHeartbeat({
       }
     };
     window.addEventListener("pagehide", onPageHide);
-    // 見ていないタブではタイマーが間引かれるので、戻ってきたらすぐ1回送る
+    // 見ていないタブではタイマーが間引かれるので、戻ってきたらすぐ1回送る。
+    // 見えなくなったときは、止められる前に知らせておく（サーバーが「通信切れ」で退室にしないように）
     const onVisible = () => {
-      if (document.visibilityState === "visible") void beat(null);
+      if (document.visibilityState === "visible") {
+        void beat(null);
+        return;
+      }
+      try {
+        navigator.sendBeacon("/api/hidden");
+      } catch {
+        // 送れなくても、次のハートビートで伝わる
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
     // 「続ける」を押したときなど、すぐ送りたいとき
@@ -136,6 +172,7 @@ export function useHeartbeat({
     window.addEventListener(BEAT_NOW_EVENT, onNow);
     return () => {
       stopped = true;
+      clearTimeout(settle);
       clearInterval(id);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener(BEAT_NOW_EVENT, onNow);

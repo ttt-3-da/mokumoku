@@ -46,6 +46,8 @@ export default async function RoomLivePage({ params }: PageProps<"/rooms/[id]/li
 
   return (
     <RoomLive
+      // 記録が区切られた・入り直したときは、新しい記録で画面を作り直す
+      key={(session as StudySession).id}
       room={room as Room}
       session={session as StudySession}
       me={{ id: me.id, displayName: me.display_name, avatar, plantLevel: plantLevel((stats as { total_minutes?: number } | null)?.total_minutes ?? 0) }}

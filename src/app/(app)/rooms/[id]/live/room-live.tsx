@@ -5,7 +5,7 @@ import type { Todo } from "@/lib/todo";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Button, inputClass } from "@/components/ui";
-import type { Avatar } from "@/lib/avatar";
+import { parseAvatar, type Avatar } from "@/lib/avatar";
 import { rpcErrorMessage } from "@/lib/errors";
 import { useDocumentHidden } from "@/lib/hooks/use-document-hidden";
 import { useNow } from "@/lib/hooks/use-now";
@@ -141,7 +141,42 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
     room.timer_mode === "pomodoro" && now !== null
       ? computeTimer(timerStartedAt, room.focus_minutes, room.break_minutes, now)
       : { kind: "idle" };
-  const status = resolveStatus({ timerPhase: timer.kind });
+  // タブが見えないまま15分たったら「離席中」（それまでは、ほかのタブで調べものをしていても集中中のまま）
+  const [awaySelf, setAwaySelf] = useState(false);
+  useEffect(() => {
+    if (!hidden) {
+      const t = setTimeout(() => setAwaySelf(false), 0);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setAwaySelf(true), AWAY_AFTER_MS);
+    return () => clearTimeout(t);
+  }, [hidden]);
+  const status = awaySelf ? "away" : resolveStatus({ timerPhase: timer.kind });
+
+  // 記録が区切られた・入り直したときのお知らせ（画面を作り直したあとに出す）
+  const [notice, setNotice] = useState<string | null>(null);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const msg = sessionStorage.getItem(NOTICE_KEY);
+        if (msg) {
+          sessionStorage.removeItem(NOTICE_KEY);
+          setNotice(msg);
+        }
+      } catch {
+        // 読めなくても困らない
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+  function reopenWithNotice(msg: string) {
+    try {
+      sessionStorage.setItem(NOTICE_KEY, msg);
+    } catch {
+      // 出せなくても困らない
+    }
+    router.refresh();
+  }
 
   // ---------------------------------------------------------------- 効果音
   const [muted, toggleMuted] = useMuted();
@@ -298,8 +333,28 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
       },
     },
   });
+  // タブが見えていない人：画面が止まって Presence から消えても部屋にはいるので、サーバーから取って並べる。
+  // 見えなくなって15分をこえた人は「離席中」
+  const [hiddenMembers, setHiddenMembers] = useState<HiddenMember[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await createClient().rpc("get_room_hidden_members", { p_room_id: room.id });
+      if (!cancelled) setHiddenMembers((data ?? []) as HiddenMember[]);
+    };
+    const first = setTimeout(() => void load(), 0);
+    const id = setInterval(() => void load(), 30_000);
+    return () => {
+      cancelled = true;
+      clearTimeout(first);
+      clearInterval(id);
+    };
+  }, [room.id]);
+  const nowMinute = now === null ? null : Math.floor(now / 60_000);
+  const withHidden = mergeHiddenMembers(presenceMembers, hiddenMembers, me.id, nowMinute === null ? null : nowMinute * 60_000, resolveStatus({ timerPhase: timer.kind }));
   // キック・BAN された人は、その人の画面が閉じるのを待たずに消す
-  const members = useMemo(() => presenceMembers.filter((m) => !removed.has(m.userId) && !blockedSet.has(m.userId)), [presenceMembers, removed, blockedSet]);
+  const members = withHidden.filter((m) => !removed.has(m.userId) && !blockedSet.has(m.userId));
+  const memberIds = members.map((m) => m.userId).join(",");
   // その人の画面が閉じて Presence から消えたら、隠すリストからも外す（キックのあと入り直せるように）
   useEffect(() => {
     const stale = [...removed].filter((id) => !presenceMembers.some((m) => m.userId === id));
@@ -316,7 +371,12 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
     return () => clearTimeout(t);
   }, [presenceMembers, removed]);
 
+  const membersRef = useRef(members);
   useEffect(() => {
+    membersRef.current = members;
+  });
+  useEffect(() => {
+    const members = membersRef.current;
     const prev = prevMembersRef.current;
     prevMembersRef.current = members;
     const gone = prev.filter((p) => !members.some((m) => m.userId === p.userId));
@@ -331,7 +391,7 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
     }, LEAVE_MS);
     timers.add(add);
     timers.add(remove);
-  }, [members]);
+  }, [memberIds]);
 
   useEffect(() => {
     const timers = departTimersRef.current;
@@ -384,8 +444,18 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
       if (r.timer_started_at !== timerStartedAt) setTimerStartedAt(r.timer_started_at);
     },
     onLost: () => {
-      // しばらく通信できなかった間に、自動で退室扱いになった
-      router.replace(`/sessions/${session.id}/done`);
+      // しばらく通信できなかった間に、自動で退室扱いになった。同じ部屋に入り直せたら、そのまま続ける
+      void (async () => {
+        const { data, error } = await createClient().rpc("rejoin_after_drop", { p_session_id: session.id });
+        if (!error && (data as { status?: string } | null)?.status === "entered") {
+          reopenWithNotice("しばらく画面から離れていたので、入り直しました。勉強の記録は、離れる前のところで区切っています。");
+          return;
+        }
+        router.replace(`/sessions/${session.id}/done`);
+      })();
+    },
+    onSplit: () => {
+      reopenWithNotice("15分以上ほかの画面にいたので、記録をそこで区切って、続きを始めました。");
     },
     onAccountSwitched: () => {
       setAccountSwitched(true);
@@ -722,6 +792,14 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
             </Link>
           </div>
         )}
+        {notice && (
+          <p role="status" className="flex items-start gap-2 rounded-xl bg-kinako/30 px-3 py-2 text-sm">
+            <span className="flex-1">{notice}</span>
+            <button type="button" onClick={() => setNotice(null)} className="text-xs text-ink-soft hover:underline">
+              とじる
+            </button>
+          </p>
+        )}
         {error && (
           <p role="alert" className="text-sm text-red-600">
             {error}
@@ -878,4 +956,44 @@ function TaskEditor({ value, onChange }: { value: string; onChange: (v: string) 
       )}
     </form>
   );
+}
+
+const AWAY_AFTER_MS = 15 * 60_000;
+const NOTICE_KEY = "mokumoku:room-notice";
+
+type HiddenMember = { user_id: string; display_name: string; avatar: unknown; task: string; started_at: string; hidden_since: string };
+
+/**
+ * Presence の在室者に、タブが見えていない人（サーバーから取ったもの）を足す。
+ * 見えなくなって15分をこえた人は「離席中」。Presence にいない人は、15分までは部屋の今の状態（集中中・休憩中）で出す
+ */
+function mergeHiddenMembers(
+  presence: PresenceMeta[],
+  hidden: HiddenMember[],
+  myId: string,
+  now: number | null,
+  roomStatus: PresenceMeta["status"],
+): PresenceMeta[] {
+  if (hidden.length === 0 || now === null) return presence;
+  const awayOf = (h: HiddenMember) => now - Date.parse(h.hidden_since) >= AWAY_AFTER_MS;
+  const byId = new Map(hidden.filter((h) => h.user_id !== myId).map((h) => [h.user_id, h]));
+  const merged = presence.map((m) => {
+    const h = byId.get(m.userId);
+    return h && awayOf(h) ? { ...m, status: "away" as const } : m;
+  });
+  for (const h of byId.values()) {
+    if (merged.some((m) => m.userId === h.user_id)) continue;
+    merged.push({
+      userId: h.user_id,
+      displayName: h.display_name,
+      task: h.task,
+      status: awayOf(h) ? "away" : roomStatus,
+      joinedAt: h.started_at,
+      avatar: parseAvatar(h.avatar),
+      stopwatch: null,
+      plantLevel: 1,
+      updatedAt: 0,
+    });
+  }
+  return merged.sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt) || a.userId.localeCompare(b.userId));
 }
