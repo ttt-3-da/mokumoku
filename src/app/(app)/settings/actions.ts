@@ -6,6 +6,7 @@ import { usernameToEmail } from "@/lib/auth/username-email";
 import { rpcErrorMessage } from "@/lib/errors";
 import { createClient, requireProfile } from "@/lib/supabase/server";
 import { parseGoalHours } from "@/lib/goals";
+import { parseOfflineLeave } from "@/lib/offline-leave";
 import { validateBio, validateDisplayName, validatePassword } from "@/lib/validation";
 
 export type FormState = { error?: string; saved?: boolean };
@@ -57,6 +58,20 @@ export async function updateGoal(_prev: FormState, formData: FormData): Promise<
   if (error) return { error: "保存できませんでした" };
 
   revalidatePath("/", "layout");
+  return { saved: true };
+}
+
+/** 電源が切れたときなど、知らせが止まってから退室にするまでの分 */
+export async function updateOfflineLeave(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireProfile();
+  const minutes = parseOfflineLeave(formData.get("offline_leave_minutes"));
+  if (minutes === null) return { error: "選べる時間から選んでください" };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ offline_leave_minutes: minutes }).eq("id", me.id);
+  if (error) return { error: "保存できませんでした" };
+
+  revalidatePath("/settings");
   return { saved: true };
 }
 

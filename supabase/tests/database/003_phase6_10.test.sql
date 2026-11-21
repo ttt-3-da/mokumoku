@@ -108,6 +108,8 @@ select pg_temp.logout();
 -- bob の最後のハートビートが5分前だったことにして後処理を走らせる
 update public.study_sessions set started_at = now() - interval '30 minutes', last_seen_at = now() - interval '5 minutes'
 where user_id = '00000000-0000-0000-0000-0000000001b2' and ended_at is null;
+-- 退室までの分を1分にしておく（はじめの設定は5分）
+update public.profiles set offline_leave_minutes = 1;
 select public.cleanup_stale_sessions();
 select is((select ended_at = last_seen_at from public.study_sessions
            where user_id = '00000000-0000-0000-0000-0000000001b2' order by started_at desc limit 1), true,

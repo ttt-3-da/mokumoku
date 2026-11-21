@@ -52,7 +52,7 @@ type HeartbeatResult = {
 /**
  * 60秒ごとにハートビートを送る（タブが非表示でも送る。ほかのタブを見ている間も15分までは学習時間に含めるため）。
  * タブが見えなくなったら /api/hidden に知らせる（見えない間はブラウザがハートビートを止めることがあるので、サーバーは35分まで待つ）。
- * タブを閉じると /api/leaving に知らせ、30秒戻らなければ cron が閉じる（知らせが届かなくても3分後に閉じる）。
+ * タブを閉じると /api/leaving に知らせ、30秒戻らなければ cron が閉じる（知らせが届かなくても、設定の「電源が切れたときの退室」の分がたつと閉じる）。
  * - task が変わったらすぐに送って DB にも保存する
  * - セッションがもう閉じられていたら onLost を呼ぶ
  */
@@ -149,7 +149,7 @@ export function useHeartbeat({
       try {
         navigator.sendBeacon("/api/leaving");
       } catch {
-        // 送れなくても、これまでどおり3分後に閉じられる
+        // 送れなくても、設定の分がたつと閉じられる
       }
     };
     window.addEventListener("pagehide", onPageHide);

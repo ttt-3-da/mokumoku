@@ -16,6 +16,8 @@ export type Profile = {
   hidden_sections?: string[];
   /** 週の目標（分）。決めていなければ null */
   weekly_goal_minutes: number | null;
+  /** 電源が切れたときなど、知らせが止まってから退室にするまでの分 */
+  offline_leave_minutes: number;
   /** 公式（管理者）アカウント */
   is_admin?: boolean;
   /** 利用停止にされた時刻 */

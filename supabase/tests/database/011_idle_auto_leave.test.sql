@@ -51,6 +51,8 @@ insert into public.study_sessions (room_id, user_id, task, started_at, last_seen
 values ('21000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-0000000011d4', '化学',
         now() - interval '1 hour', now() - interval '5 minutes', now() - interval '6 minutes');
 
+-- 退室までの分を1分にしておく（はじめの設定は5分）
+update public.profiles set offline_leave_minutes = 1;
 select public.cleanup_stale_sessions();
 
 select is((select ended_at from public.study_sessions where user_id = '00000000-0000-0000-0000-0000000011a1'),

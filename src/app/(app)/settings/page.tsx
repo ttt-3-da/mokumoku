@@ -7,7 +7,7 @@ import { RecoveryCodeMaker } from "@/components/recovery-code";
 import { Card } from "@/components/ui";
 import { parseAvatar } from "@/lib/avatar";
 import { createClient, requireProfile } from "@/lib/supabase/server";
-import { ColorSchemeForm, DeleteAccountForm, GoalForm, PasswordForm, ProfileForm, VisibilityForm } from "./forms";
+import { ColorSchemeForm, DeleteAccountForm, GoalForm, OfflineLeaveForm, PasswordForm, ProfileForm, VisibilityForm } from "./forms";
 
 export const metadata: Metadata = { title: "設定" };
 
@@ -56,6 +56,15 @@ export default async function SettingsPage() {
         <h2 className="mb-1 font-bold">週の目標</h2>
         <p className="mb-3 text-xs text-ink-soft">ロビーとプロフィールに今週の進み具合が出ます（プロフィールでは統計を見せる設定のときだけ）。</p>
         <GoalForm goalMinutes={me.weekly_goal_minutes} />
+      </Card>
+
+      <Card>
+        <h2 className="mb-1 font-bold">🔌 電源が切れたときの退室</h2>
+        <p className="mb-3 text-xs text-ink-soft">
+          スマホやパソコンの電源が切れたり、通信が切れたりして部屋の画面とつながらなくなってから、何分で退室にするかを選べます。
+          タブを閉じたとき・ほかのタブを見ているときは、この設定とは別です。
+        </p>
+        <OfflineLeaveForm minutes={me.offline_leave_minutes} />
       </Card>
 
       <Card>

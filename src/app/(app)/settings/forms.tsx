@@ -5,7 +5,8 @@ import { Button, Field, inputClass } from "@/components/ui";
 import { COLOR_SCHEME_KEY, COLOR_SCHEME_LABEL, parseColorScheme, type ColorSchemePref } from "@/lib/color-scheme";
 import { GOAL_HOURS_MAX, GOAL_HOURS_MIN } from "@/lib/goals";
 import { BIO_MAX, charLength } from "@/lib/validation";
-import { changePassword, deleteAccount, updateGoal, updateProfile, updateVisibility, type FormState } from "./actions";
+import { OFFLINE_LEAVE_CHOICES } from "@/lib/offline-leave";
+import { changePassword, deleteAccount, updateGoal, updateOfflineLeave, updateProfile, updateVisibility, type FormState } from "./actions";
 
 function Message({ state, okText }: { state: FormState; okText: string }) {
   if (state.error) {
@@ -148,6 +149,28 @@ export function GoalForm({ goalMinutes }: { goalMinutes: number | null }) {
           />
           <span className="text-sm">時間 / 週</span>
         </div>
+      </Field>
+      <Message state={state} okText="保存しました" />
+      <Button type="submit" disabled={pending} className="self-end">
+        {pending ? "保存中…" : "保存する"}
+      </Button>
+    </form>
+  );
+}
+
+export function OfflineLeaveForm({ minutes }: { minutes: number }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(updateOfflineLeave, {});
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <Field label="退室になるまでの時間" htmlFor="offline_leave_minutes" hint="記録は、最後に画面とつながっていた時刻までになります">
+        <select id="offline_leave_minutes" name="offline_leave_minutes" defaultValue={minutes} className={`${inputClass} max-w-40`}>
+          {OFFLINE_LEAVE_CHOICES.map((m) => (
+            <option key={m} value={m}>
+              {m}分
+            </option>
+          ))}
+        </select>
       </Field>
       <Message state={state} okText="保存しました" />
       <Button type="submit" disabled={pending} className="self-end">

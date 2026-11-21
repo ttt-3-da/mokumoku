@@ -487,7 +487,7 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
   }
 
   // 部屋の画面からほかのページへのリンクを押したら、退室してよいか聞く
-  // （ページを離れるとハートビートが止まり、3分後に退室になるため）
+  // （ページを離れるとハートビートが止まり、設定の分がたつと退室になるため）
   // 休憩中はページを離れても退室にならない（サーバーが休憩が終わるまで待つ）ので聞かない
   const leaveRef = useRef(leave);
   const onBreakRef = useRef(false);
