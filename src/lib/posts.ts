@@ -30,6 +30,8 @@ export type Post = {
   avatar: Avatar;
   mine: boolean;
   reactions: PostReaction[];
+  /** 運営が「確認しました」の印をつけた */
+  staff_checked: boolean;
 };
 
 export type FeedTab = "following" | "all";

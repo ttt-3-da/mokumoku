@@ -69,11 +69,15 @@ export function TodoList({ initial, compact = false }: { initial: Todo[]; compac
     setTodos((list) => list.map((x) => (x.id === t.id ? { ...x, done_at } : x)));
     setError(null);
     startTransition(async () => {
-      const { error } = await createClient().from("todos").update({ done_at }).eq("id", t.id);
+      // PATCH ではなく RPC（POST）で送る。Mac の Safari で todos への PATCH が送られないことがあったため
+      const { data, error } = await createClient().rpc("set_todo_done", { p_id: t.id, p_done: Boolean(done_at) });
       if (error) {
         setTodos((list) => list.map((x) => (x.id === t.id ? t : x)));
         setError(rpcErrorMessage(error));
+        return;
       }
+      // 終わった時刻はサーバーの時計のものにそろえる
+      setTodos((list) => list.map((x) => (x.id === t.id ? { ...x, done_at: (data as string | null) ?? null } : x)));
     });
   }
 

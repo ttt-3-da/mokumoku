@@ -34,6 +34,7 @@ const MESSAGES: Record<string, string> = {
   invalid_section: "その項目は切りかえられません",
   invalid_announcement: "お知らせの文は1〜300文字にしてください",
   invalid_reply: "返信は1〜500文字にしてください",
+  todo_not_found: "そのToDoは見つかりません（消されたかもしれません）",
   feedback_not_found: "そのフィードバックは見つかりません",
   user_gone: "送った人が退会しているので、返信できません",
   invalid_profile_text: "表示名は1〜30文字、自己紹介は500文字以内にしてください",

@@ -44,7 +44,7 @@ export default async function FeedPage({ searchParams }: PageProps<"/feed">) {
       {error ? (
         <p className="text-sm text-red-600">読み込めませんでした。</p>
       ) : (
-        <FeedList key={tab} tab={tab} initial={(data ?? []) as Post[]} pageSize={PAGE_SIZE} myAvatar={avatar} />
+        <FeedList key={tab} tab={tab} initial={(data ?? []) as Post[]} pageSize={PAGE_SIZE} myAvatar={avatar} isAdmin={Boolean(me.is_admin)} />
       )}
     </div>
   );

@@ -104,6 +104,23 @@ function NotificationBody({ n }: { n: NotificationRow }) {
       </>
     );
   }
+  if (n.kind === "post_checked") {
+    return (
+      <>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center text-3xl" aria-hidden>
+          ✅
+        </span>
+        <p className="min-w-0 flex-1 text-sm">
+          運営が、あなたの投稿を確認しました
+          {n.detail && <span className="block break-words text-xs text-ink-soft">「{n.detail}」</span>}
+          <Link href="/feed?tab=all" className="mt-1 inline-block font-bold text-accent-strong hover:underline">
+            みんなの記録を見る
+          </Link>
+          <When n={n} />
+        </p>
+      </>
+    );
+  }
   if (n.kind === "feedback_reply") {
     return (
       <>

@@ -53,5 +53,5 @@ test("遊びに行った部屋にスタンプを置くとお知らせが届き�
   await a.goto("/settings");
   await a.getByRole("button", { name: "ブロックを解除" }).click();
   await a.reload();
-  await expect(a.getByText("いません。")).toBeVisible();
+  await expect(a.getByText("いません。", { exact: true })).toBeVisible();
 });

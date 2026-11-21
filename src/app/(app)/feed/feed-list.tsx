@@ -14,7 +14,20 @@ import { createClient } from "@/lib/supabase/client";
 
 const timeFormat = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
 
-export function FeedList({ tab, initial, pageSize, myAvatar }: { tab: FeedTab; initial: Post[]; pageSize: number; myAvatar: Avatar }) {
+export function FeedList({
+  tab,
+  initial,
+  pageSize,
+  myAvatar,
+  isAdmin = false,
+}: {
+  tab: FeedTab;
+  initial: Post[];
+  pageSize: number;
+  myAvatar: Avatar;
+  /** 運営だけ「確認しました」の印をつけられる */
+  isAdmin?: boolean;
+}) {
   const [posts, setPosts] = useState(initial);
   const [hasMore, setHasMore] = useState(initial.length >= pageSize);
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +55,19 @@ export function FeedList({ tab, initial, pageSize, myAvatar }: { tab: FeedTab; i
       const { error } = await createClient().rpc("toggle_post_reaction", { p_post_id: post.id, p_stamp_id: stamp });
       if (error) {
         update(!on);
+        setError(rpcErrorMessage(error));
+      }
+    });
+  }
+
+  function setChecked(post: Post, checked: boolean) {
+    const update = (value: boolean) => setPosts((list) => list.map((p) => (p.id === post.id ? { ...p, staff_checked: value } : p)));
+    update(checked);
+    setError(null);
+    startTransition(async () => {
+      const { error } = await createClient().rpc("admin_set_post_checked", { p_post_id: post.id, p_checked: checked });
+      if (error) {
+        update(!checked);
         setError(rpcErrorMessage(error));
       }
     });
@@ -84,7 +110,7 @@ export function FeedList({ tab, initial, pageSize, myAvatar }: { tab: FeedTab; i
       <ul className="flex flex-col gap-3">
         {posts.map((p) => (
           <li key={p.id}>
-            <PostCard post={p} myAvatar={myAvatar} onReact={react} onRemove={remove} />
+            <PostCard post={p} myAvatar={myAvatar} onReact={react} onRemove={remove} onCheck={isAdmin ? setChecked : undefined} />
           </li>
         ))}
       </ul>
@@ -102,11 +128,14 @@ function PostCard({
   myAvatar,
   onReact,
   onRemove,
+  onCheck,
 }: {
   post: Post;
   myAvatar: Avatar;
   onReact: (p: Post, s: PostStampId) => void;
   onRemove: (p: Post) => void;
+  /** 運営のときだけ渡す */
+  onCheck?: (p: Post, checked: boolean) => void;
 }) {
   return (
     <Card className="flex flex-col gap-3" aria-label={`${post.display_name} さんの投稿`}>
@@ -136,6 +165,9 @@ function PostCard({
             {post.todos_done > 0 && <span>✅ ToDoを{post.todos_done}個おわらせた</span>}
           </p>
           {post.body && <p className="mt-2 whitespace-pre-wrap break-words text-sm">{post.body}</p>}
+          {post.staff_checked && (
+            <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-cream px-2.5 py-0.5 text-xs font-bold text-accent-strong">✅ 運営が確認しました</p>
+          )}
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -159,7 +191,17 @@ function PostCard({
             </button>
           );
         })}
-        <span className="ml-auto">
+        <span className="ml-auto flex items-center gap-3">
+          {onCheck && (
+            <button
+              type="button"
+              onClick={() => onCheck(post, !post.staff_checked)}
+              aria-pressed={post.staff_checked}
+              className="rounded-full border border-line px-2 py-0.5 text-xs font-bold text-ink-soft hover:bg-cream"
+            >
+              {post.staff_checked ? "確認の印をはずす" : "✅ 確認しましたをつける"}
+            </button>
+          )}
           {post.mine ? (
             <button type="button" onClick={() => onRemove(post)} className="text-xs text-ink-soft hover:text-red-700 hover:underline">
               投稿を消す

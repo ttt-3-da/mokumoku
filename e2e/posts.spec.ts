@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { backdateSession, signUp, uniqueUsername } from "./helpers";
+import { backdateSession, makeAdmin, signUp, uniqueUsername } from "./helpers";
 
 async function studyOnce(page: Page, task: string) {
   await page.getByRole("link", { name: "＋ 部屋をつくる" }).click();
@@ -47,4 +47,33 @@ test("勉強の記録を投稿すると、ほかの人がもちスタンプで�
   // A にお知らせが届く
   await a.goto("/notifications");
   await expect(a.getByText("に「ぱちぱち」を送りました")).toBeVisible();
+});
+
+test("運営は投稿に「運営が確認しました」の印をつけられ、投稿した人にお知らせが届く", async ({ browser }) => {
+  const a = await (await browser.newContext()).newPage();
+  const admin = await (await browser.newContext()).newPage();
+  const tag = Date.now().toString(36).slice(-4);
+  const author = `見てほしいもち${tag}`;
+  const adminName = uniqueUsername("pk");
+  await signUp(a, uniqueUsername("pc"), author);
+  await signUp(admin, adminName, "運営もち");
+  await makeAdmin(adminName);
+
+  await studyOnce(a, "数学");
+  await a.getByLabel("📣 みんなに投稿する（任意）").fill(`運営さん見てください ${tag}`);
+  await a.getByRole("button", { name: "投稿する" }).click();
+  await expect(a).toHaveURL(/\/feed$/);
+  // ふつうの人には印をつけるボタンが出ない
+  await expect(a.getByRole("button", { name: "✅ 確認しましたをつける" })).toHaveCount(0);
+
+  await admin.goto("/feed?tab=all");
+  const post = admin.getByLabel(`${author} さんの投稿`);
+  await post.getByRole("button", { name: "✅ 確認しましたをつける" }).click();
+  await expect(post.getByText("✅ 運営が確認しました")).toBeVisible();
+
+  // みんなに見える
+  await a.reload();
+  await expect(a.getByLabel(`${author} さんの投稿`).getByText("✅ 運営が確認しました")).toBeVisible();
+  await a.goto("/notifications");
+  await expect(a.getByText("運営が、あなたの投稿を確認しました")).toBeVisible();
 });
