@@ -51,7 +51,7 @@ import { TASK_MAX, validateTask } from "@/lib/validation";
 import { IdleDialog, useIdleCheck } from "./idle-check";
 import { MemberActions, type RoomRole } from "./member-actions";
 import { CopyInviteButton } from "@/components/invite-link";
-import { OwnerMenu } from "./owner-menu";
+import { OwnerMenu, type SettingsTab } from "./owner-menu";
 import { RoomScene } from "./room-scene";
 import { Seats, type SeatMember } from "./seats";
 import { useRoomChannel } from "./use-room-channel";
@@ -89,6 +89,7 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
   const [leaving, setLeaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [menuTab, setMenuTab] = useState<SettingsTab>("basic");
   const [accountSwitched, setAccountSwitched] = useState(false);
   const [theme, setTheme] = useState<RoomTheme>(parseTheme(room.theme));
 
@@ -613,7 +614,17 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
             <h1 className="truncate text-lg font-bold leading-tight">{room.name}</h1>
             <div className="flex flex-wrap items-center gap-x-2">
               <ConnectionBadge state={connection} />
-              <RoomTomatoes roomId={room.id} />
+              <RoomTomatoes
+                roomId={room.id}
+                onShop={
+                  staffNow
+                    ? () => {
+                        setMenuTab("look");
+                        setMenuOpen(true);
+                      }
+                    : undefined
+                }
+              />
             </div>
           </div>
           <button
@@ -631,7 +642,10 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
             <Button
               variant="ghost"
               className="shrink-0 px-2.5 py-1 text-xs"
-              onClick={() => setMenuOpen((v) => !v)}
+              onClick={() => {
+                setMenuTab("basic");
+                setMenuOpen((v) => !v);
+              }}
               aria-expanded={menuOpen}
             >
               ⚙️<span className="hidden sm:inline"> 設定</span>
@@ -657,6 +671,7 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
         />
         {staffNow && menuOpen && (
           <OwnerMenu
+            initialTab={menuTab}
             onClose={() => setMenuOpen(false)}
             room={room}
             isOwner={myRole === "owner"}
@@ -1002,7 +1017,7 @@ function mergeHiddenMembers(
 }
 
 /** この部屋に集まっている🍅の数（だれでも見られる。みんなの勉強25分で1個。勉強中の分も入るので1分ごとに読み直す） */
-function RoomTomatoes({ roomId }: { roomId: string }) {
+function RoomTomatoes({ roomId, onShop }: { roomId: string; /** オーナー・モデレーターのときだけ：背景を買う画面を開く */ onShop?: () => void }) {
   const [count, setCount] = useState<number | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -1020,8 +1035,20 @@ function RoomTomatoes({ roomId }: { roomId: string }) {
     };
   }, [roomId]);
   if (count === null) return null;
+  if (onShop) {
+    return (
+      <button
+        type="button"
+        onClick={onShop}
+        aria-label={`この部屋の🍅 ${count}個・🎨 背景を買う`}
+        className="rounded-full bg-cream px-2 text-[11px] leading-5 font-bold hover:bg-sakura/20"
+      >
+        🍅 {count}・🎨 背景を買う
+      </button>
+    );
+  }
   return (
-    <span className="text-xs text-ink-soft" title="みんなの勉強25分で1個たまります" aria-label={`この部屋の🍅 ${count}個`}>
+    <span className="text-xs text-ink-soft" title="たまった🍅で、オーナーが部屋の背景を買えます（みんなの勉強25分で1個）" aria-label={`この部屋の🍅 ${count}個`}>
       🍅 {count}
     </span>
   );

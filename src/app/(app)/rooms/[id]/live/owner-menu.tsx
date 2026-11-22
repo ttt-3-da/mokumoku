@@ -29,7 +29,10 @@ export function OwnerMenu({
   onEvacuate,
   onDeleteRoom,
   onClose,
+  initialTab = "basic",
 }: {
+  /** 開いたときのタブ（部屋の上の「背景を買う」からは背景のタブ） */
+  initialTab?: SettingsTab;
   onClose: () => void;
   room: Room;
   isOwner: boolean;
@@ -40,7 +43,7 @@ export function OwnerMenu({
   onEvacuate: () => Promise<string | null>;
   onDeleteRoom: () => Promise<string | null>;
 }) {
-  const [tab, setTab] = useState<SettingsTab>("basic");
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
 
   // Esc で閉じる。開いている間は後ろの画面をスクロールさせない
   useEffect(() => {
@@ -115,8 +118,8 @@ export function OwnerMenu({
   );
 }
 
-const SETTINGS_TABS = { basic: "基本", members: "メンバー", look: "見た目" } as const;
-type SettingsTab = keyof typeof SETTINGS_TABS;
+const SETTINGS_TABS = { basic: "基本", members: "メンバー", look: "🎨 背景" } as const;
+export type SettingsTab = keyof typeof SETTINGS_TABS;
 
 const DAY_LABELS = ["月", "火", "水", "木", "金", "土", "日"] as const;
 
@@ -323,44 +326,74 @@ function ThemePicker({
     setBusy(false);
   }
 
+  const themes = Object.entries(ROOM_THEMES) as [RoomTheme, (typeof ROOM_THEMES)[RoomTheme]][];
   return (
-    <div className="flex flex-col gap-1">
-      <span className="flex items-baseline gap-2 font-bold">
-        部屋のテーマ
-        {shop && <span className="text-xs font-normal text-ink-soft">この部屋の🍅 {shop.tomatoes}（みんなの勉強25分で1個）</span>}
-      </span>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="部屋のテーマ">
-        {(Object.entries(ROOM_THEMES) as [RoomTheme, (typeof ROOM_THEMES)[RoomTheme]][]).map(([id, t]) => {
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1 rounded-2xl bg-paper p-3">
+        <span className="font-bold">部屋の背景</span>
+        <p className="text-xs leading-relaxed text-ink-soft">
+          この部屋でみんなが勉強すると🍅がたまります（だれかが25分勉強すると1個）。たまった🍅で新しい背景を買えます。買った背景は、この部屋でずっと使えます。
+        </p>
+        <p className="text-sm">
+          いまこの部屋の🍅 <b className="text-lg tabular-nums">{shop ? shop.tomatoes : "…"}</b> 個
+        </p>
+      </div>
+      <ul className="grid grid-cols-2 gap-2" role="group" aria-label="部屋の背景">
+        {themes.map(([id, t]) => {
           const price = priceOf(id);
-          if (available(id)) {
-            return (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={theme === id}
-                disabled={busy}
-                onClick={async () => setError(await onChange(id))}
-                className={`rounded-full px-3 py-1 text-xs ${theme === id ? "bg-ink text-paper" : "bg-paper hover:bg-sakura/20"}`}
-              >
-                {t.icon} {t.label}
-              </button>
-            );
-          }
-          const short = price !== undefined && shop !== null && shop.tomatoes < price;
+          const owned = available(id);
+          const using = theme === id;
+          const lack = price !== undefined && shop !== null ? Math.max(0, price - shop.tomatoes) : null;
           return (
-            <button
-              key={id}
-              type="button"
-              disabled={busy || price === undefined || short}
-              onClick={() => price !== undefined && buy(id, price)}
-              title={short ? `あと🍅${price! - shop!.tomatoes}で買えます` : undefined}
-              className="rounded-full border border-dashed border-line bg-paper px-3 py-1 text-xs text-ink-soft hover:bg-sakura/10 disabled:opacity-50"
-            >
-              {t.icon} {t.label} 🍅{price ?? "…"}
-            </button>
+            <li key={id} className={`flex flex-col overflow-hidden rounded-2xl border bg-paper ${using ? "border-ink" : "border-line"}`}>
+              {/* 背景の色の見本 */}
+              <div className="flex h-12 flex-col" aria-hidden>
+                <div className="flex flex-1 items-center justify-center text-xl" style={{ background: t.wall }}>
+                  {t.icon}
+                </div>
+                <div className="h-3" style={{ background: t.floor }} />
+              </div>
+              <div className="flex flex-1 flex-col gap-1.5 p-2">
+                <span className="text-xs font-bold">{t.label}</span>
+                {using ? (
+                  <span className="rounded-full bg-ink py-1 text-center text-xs font-bold text-paper">使用中</span>
+                ) : owned ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={async () => setError(await onChange(id))}
+                    aria-label={`「${t.label}」にする`}
+                    className="rounded-full bg-cream py-1 text-xs font-bold hover:bg-sakura/20"
+                  >
+                    この背景にする
+                  </button>
+                ) : lack === 0 ? (
+                  <button
+                    type="button"
+                    disabled={busy || price === undefined}
+                    onClick={() => price !== undefined && buy(id, price)}
+                    aria-label={`「${t.label}」を🍅${price}で買う`}
+                    className="rounded-full bg-accent py-1 text-xs font-bold text-white hover:bg-accent-strong"
+                  >
+                    🍅{price} で買う
+                  </button>
+                ) : (
+                  <span className="flex flex-col gap-1">
+                    <span className="text-center text-xs text-ink-soft">
+                      🍅{price ?? "…"}・{lack !== null ? `あと${lack}個` : "…"}
+                    </span>
+                    {price !== undefined && shop && (
+                      <span className="h-1.5 overflow-hidden rounded-full bg-cream" aria-hidden>
+                        <span className="block h-full bg-accent" style={{ width: `${Math.min(100, (shop.tomatoes / price) * 100)}%` }} />
+                      </span>
+                    )}
+                  </span>
+                )}
+              </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
       {error && (
         <p role="alert" className="text-xs text-red-600">
           {error}
