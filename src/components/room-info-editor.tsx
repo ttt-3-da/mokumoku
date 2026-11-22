@@ -26,9 +26,16 @@ export function RoomInfoEditor({ room }: { room: EditableRoom }) {
     const v = validateRoomInfo({ name, description, icon, tags });
     if (!v.ok) return setMessage({ ok: false, text: v.error });
     setSaving(true);
-    const { error } = await createClient().from("rooms").update(v.value).eq("id", room.id);
+    // PATCH ではなく RPC（POST）で送る。Mac の Safari で rooms への PATCH が送られないことがあったため
+    const { error } = await createClient().rpc("update_room_info", {
+      p_room_id: room.id,
+      p_name: v.value.name,
+      p_description: v.value.description,
+      p_icon: v.value.icon,
+      p_tags: v.value.tags,
+    });
     setSaving(false);
-    if (error) return setMessage({ ok: false, text: error.message === "ng_word" ? rpcErrorMessage(error) : "保存できませんでした" });
+    if (error) return setMessage({ ok: false, text: error.message === "ng_word" || error.message === "forbidden" ? rpcErrorMessage(error) : "保存できませんでした" });
     setName(v.value.name);
     setDescription(v.value.description);
     setTags(v.value.tags.join(" "));

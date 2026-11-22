@@ -1041,9 +1041,9 @@ function RoomTomatoes({ roomId, onShop }: { roomId: string; /** オーナー・�
         type="button"
         onClick={onShop}
         aria-label={`この部屋の🍅 ${count}個・🎨 背景を買う`}
-        className="rounded-full bg-cream px-2 text-[11px] leading-5 font-bold hover:bg-sakura/20"
+        className="whitespace-nowrap rounded-full bg-cream px-2 text-[11px] leading-5 font-bold hover:bg-sakura/20"
       >
-        🍅 {count}・🎨 背景を買う
+        🍅 {count}・🎨<span className="hidden sm:inline"> 背景を買う</span>
       </button>
     );
   }
