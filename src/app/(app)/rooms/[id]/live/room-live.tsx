@@ -611,7 +611,10 @@ export function RoomLive({ room, session, me, isStaff, owned, blocked, todos }: 
           </span>
           <div className="min-w-0 flex-1">
             <h1 className="truncate text-lg font-bold leading-tight">{room.name}</h1>
-            <ConnectionBadge state={connection} />
+            <div className="flex flex-wrap items-center gap-x-2">
+              <ConnectionBadge state={connection} />
+              <RoomTomatoes roomId={room.id} />
+            </div>
           </div>
           <button
             type="button"
@@ -996,4 +999,30 @@ function mergeHiddenMembers(
     });
   }
   return merged.sort((a, b) => Date.parse(a.joinedAt) - Date.parse(b.joinedAt) || a.userId.localeCompare(b.userId));
+}
+
+/** この部屋に集まっている🍅の数（だれでも見られる。みんなの勉強25分で1個。勉強中の分も入るので1分ごとに読み直す） */
+function RoomTomatoes({ roomId }: { roomId: string }) {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      const { data } = await createClient().rpc("room_theme_shop", { p_room_id: roomId });
+      const n = (data as { tomatoes?: number } | null)?.tomatoes;
+      if (!cancelled && typeof n === "number") setCount(n);
+    };
+    const t = setTimeout(() => void load(), 0);
+    const id = setInterval(() => void load(), 60_000);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      clearInterval(id);
+    };
+  }, [roomId]);
+  if (count === null) return null;
+  return (
+    <span className="text-xs text-ink-soft" title="みんなの勉強25分で1個たまります" aria-label={`この部屋の🍅 ${count}個`}>
+      🍅 {count}
+    </span>
+  );
 }
