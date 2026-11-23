@@ -6,9 +6,11 @@ import { formatMinutes } from "@/lib/pomodoro";
 import { WEEKDAY_LABELS } from "@/lib/stats";
 import {
   buildInsights,
+  canGoBack,
   CHRONOTYPE_LABEL,
   INSIGHT_PERIODS,
   parseInsightPeriod,
+  periodLabel,
   periodStartIso,
   type InsightPeriod,
   type StudyRow,
@@ -17,10 +19,14 @@ import { createClient } from "@/lib/supabase/client";
 
 const PERIOD_KEY = "mokumoku:insight-period";
 
-/** 記録ページ上のふり返り。期間を切り替えると、その期間のセッションを読み直して集計する */
+/** 記録ページ上のふり返り。期間を切り替えると、その期間のセッションを読み直して集計する。
+ *  「‹」「›」で先週・先月など前の期間もさかのぼれる */
 export function Insights() {
   const [period, setPeriod] = useState<InsightPeriod>("week");
-  const [rows, setRows] = useState<{ period: InsightPeriod; rows: StudyRow[] } | null>(null);
+  // 0 が今の期間、-1 が1つ前
+  const [offset, setOffset] = useState(0);
+  const [rows, setRows] = useState<{ key: string; rows: StudyRow[] } | null>(null);
+  const key = `${period}:${offset}`;
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -37,21 +43,24 @@ export function Insights() {
   useEffect(() => {
     let alive = true;
     createClient()
-      .rpc("list_my_study_stats", { p_from: periodStartIso(period, new Date()) })
+      .rpc("list_my_study_stats", { p_from: periodStartIso(period, new Date(), offset) })
       .then(({ data, error }) => {
         if (!alive) return;
         setError(Boolean(error));
-        setRows({ period, rows: (data ?? []) as StudyRow[] });
+        setRows({ key: `${period}:${offset}`, rows: (data ?? []) as StudyRow[] });
       });
     return () => {
       alive = false;
     };
-  }, [period]);
+  }, [period, offset]);
 
-  const insights = useMemo(() => (rows ? buildInsights(rows.rows, rows.period, new Date()) : null), [rows]);
+  const insights = useMemo(() => (rows && rows.key === key ? buildInsights(rows.rows, period, new Date(), offset) : null), [rows, key, period, offset]);
+  const now = new Date();
+  const label = periodLabel(period, now, offset);
 
   function change(p: InsightPeriod) {
     setPeriod(p);
+    setOffset(0);
     try {
       localStorage.setItem(PERIOD_KEY, p);
     } catch {
@@ -81,9 +90,38 @@ export function Insights() {
         </div>
       </div>
 
+      <div className="flex items-center gap-2" aria-label="期間をさかのぼる">
+        <button
+          type="button"
+          onClick={() => setOffset((o) => o - 1)}
+          disabled={!canGoBack(period, now, offset)}
+          aria-label="前の期間"
+          className="rounded-full bg-paper px-3 py-1 text-sm hover:bg-sakura/20 disabled:opacity-30"
+        >
+          ‹ 前へ
+        </button>
+        <p className="min-w-0 flex-1 text-center text-sm font-bold" aria-live="polite">
+          {label}
+        </p>
+        <button
+          type="button"
+          onClick={() => setOffset((o) => Math.min(0, o + 1))}
+          disabled={offset >= 0}
+          aria-label="次の期間"
+          className="rounded-full bg-paper px-3 py-1 text-sm hover:bg-sakura/20 disabled:opacity-30"
+        >
+          次へ ›
+        </button>
+      </div>
+      {offset < -1 && (
+        <button type="button" onClick={() => setOffset(0)} className="-mt-2 self-center text-xs text-ink-soft underline">
+          {INSIGHT_PERIODS[period]}に戻る
+        </button>
+      )}
+
       {error ? (
         <p className="text-sm text-red-600">ふり返りを読み込めませんでした。</p>
-      ) : !insights || rows?.period !== period ? (
+      ) : !insights ? (
         <div className="h-64 animate-pulse rounded-3xl bg-paper" aria-label="読み込み中" />
       ) : (
         <>

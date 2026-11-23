@@ -65,9 +65,67 @@ export function periodStart(period: InsightPeriod, today: string): string {
   }
 }
 
+/**
+ * 期間の範囲（日本時間の日付）。offset は 0 が今の期間、-1 が1つ前（先週・先月など）。
+ * end は期間の最後の日。今の期間でも、今日より先まで含む（今週の日曜など）
+ */
+export function periodRange(period: InsightPeriod, today: string, offset = 0): { start: string; end: string } {
+  const base = periodStart(period, today);
+  switch (period) {
+    case "week": {
+      const start = addDays(base, 7 * offset);
+      return { start, end: addDays(start, 6) };
+    }
+    case "month": {
+      const start = addMonths(base, offset);
+      return { start, end: addDays(addMonths(start, 1), -1) };
+    }
+    case "3months": {
+      const start = addDays(base, 7 * 13 * offset);
+      return { start, end: addDays(start, 7 * 13 - 1) };
+    }
+    case "year": {
+      const start = addMonths(base, 12 * offset);
+      return { start, end: addDays(addMonths(start, 12), -1) };
+    }
+  }
+}
+
+/** 日本時間の日付の 0時を、DB に渡す時刻にする */
+function jstMidnightIso(date: string): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) - JST_OFFSET).toISOString();
+}
+
 /** 期間の最初の時刻（DB に渡す） */
-export function periodStartIso(period: InsightPeriod, now: Date): string {
-  return new Date(Date.parse(`${periodStart(period, jstDate(now))}T00:00:00Z`) - JST_OFFSET).toISOString();
+export function periodStartIso(period: InsightPeriod, now: Date, offset = 0): string {
+  return jstMidnightIso(periodRange(period, jstDate(now), offset).start);
+}
+
+/** 記録をさかのぼれるのは約400日前まで（DB がそれより前を返さない） */
+export const HISTORY_DAYS = 395;
+
+/** もう1つ前の期間へ戻れるか */
+export function canGoBack(period: InsightPeriod, now: Date, offset: number): boolean {
+  const today = jstDate(now);
+  return periodRange(period, today, offset - 1).end >= addDays(today, -HISTORY_DAYS);
+}
+
+/** 期間の見出し（「11月16日〜22日」「2026年10月」など） */
+export function periodLabel(period: InsightPeriod, now: Date, offset: number): string {
+  if (offset === 0) return INSIGHT_PERIODS[period];
+  if (period === "week" && offset === -1) return "先週";
+  if (period === "month" && offset === -1) return "先月";
+  const today = jstDate(now);
+  const { start, end } = periodRange(period, today, offset);
+  const y = (d: string) => Number(d.slice(0, 4));
+  const m = (d: string) => Number(d.slice(5, 7));
+  const day = (d: string) => Number(d.slice(8));
+  const thisYear = y(today);
+  if (period === "month") return `${y(start) === thisYear ? "" : `${y(start)}年`}${m(start)}月`;
+  if (period === "year") return `${y(start)}年${m(start)}月〜${y(end)}年${m(end)}月`;
+  const ys = y(start) === thisYear && y(end) === thisYear ? "" : `${y(start)}年`;
+  const endText = m(start) === m(end) && y(start) === y(end) ? `${day(end)}日` : `${y(end) !== y(start) ? `${y(end)}年` : ""}${m(end)}月${day(end)}日`;
+  return `${ys}${m(start)}月${day(start)}日〜${endText}`;
 }
 
 export type Bar = { key: string; label: string; minutes: number };
@@ -94,25 +152,29 @@ function top<T extends { minutes: number }>(m: Map<string, T>, n: number): T[] {
   return [...m.values()].sort((a, b) => b.minutes - a.minutes).slice(0, n);
 }
 
-export function buildInsights(rows: StudyRow[], period: InsightPeriod, now: Date): Insights {
+export function buildInsights(rows: StudyRow[], period: InsightPeriod, now: Date, offset = 0): Insights {
   const today = jstDate(now);
-  const start = periodStart(period, today);
+  const range = periodRange(period, today, offset);
+  const start = range.start;
+  // 数えるのは今日まで（今の期間では今日より先はまだない）
+  const last = range.end < today ? range.end : today;
   const inRange = rows.filter((r) => {
     const d = jstDate(r.started_at);
-    return d >= start && d <= today;
+    return d >= start && d <= last;
   });
 
   // 棒グラフ
   const barUnit = period === "3months" ? "week" : period === "year" ? "month" : "day";
   const bars: Bar[] = [];
   const index = new Map<string, Bar>();
-  const end = period === "week" ? addDays(start, 6) : today;
+  // 週は日曜まで7本出す。ほかは、今の期間なら今日まで、前の期間なら最後まで
+  const end = period === "week" ? range.end : last;
   if (barUnit === "day") {
     for (let d = start; d <= end; d = addDays(d, 1)) bars.push({ key: d, label: String(Number(d.slice(8))), minutes: 0 });
   } else if (barUnit === "week") {
-    for (let d = start; d <= today; d = addDays(d, 7)) bars.push({ key: d, label: `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`, minutes: 0 });
+    for (let d = start; d <= end; d = addDays(d, 7)) bars.push({ key: d, label: `${Number(d.slice(5, 7))}/${Number(d.slice(8))}`, minutes: 0 });
   } else {
-    for (let d = start; d <= today; d = addMonths(d, 1)) bars.push({ key: d.slice(0, 7), label: `${Number(d.slice(5, 7))}月`, minutes: 0 });
+    for (let d = start; d <= end; d = addMonths(d, 1)) bars.push({ key: d.slice(0, 7), label: `${Number(d.slice(5, 7))}月`, minutes: 0 });
   }
   for (const b of bars) index.set(b.key, b);
 
@@ -156,7 +218,7 @@ export function buildInsights(rows: StudyRow[], period: InsightPeriod, now: Date
 
   // 曜日ごとの平均：期間のうち今日までに、その曜日が何回あったかで割る
   const weekdayCount = Array.from({ length: 7 }, () => 0);
-  for (let d = start; d <= today; d = addDays(d, 1)) weekdayCount[(new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7] += 1;
+  for (let d = start; d <= last; d = addDays(d, 1)) weekdayCount[(new Date(`${d}T00:00:00Z`).getUTCDay() + 6) % 7] += 1;
   const weekdayAverage = weekdayTotal.map((m, i) => (weekdayCount[i] ? Math.round(m / weekdayCount[i]) : 0));
 
   const roundedHours = hours.map((h) => Math.round(h));

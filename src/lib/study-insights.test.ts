@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseGoalHours, progressPercent } from "./goals";
-import { buildInsights, jstDate, periodStart, weekStart, type StudyRow } from "./study-insights";
+import { buildInsights, canGoBack, jstDate, periodLabel, periodRange, periodStart, weekStart, type StudyRow } from "./study-insights";
 
 const row = (start: string, minutes: number, extra: Partial<StudyRow> = {}): StudyRow => ({
   started_at: start,
@@ -72,5 +72,43 @@ describe("週の目標", () => {
   it("進み具合は100%まで", () => {
     expect(progressPercent({ goal: 600, minutes: 300, achieved: false })).toBe(50);
     expect(progressPercent({ goal: 600, minutes: 900, achieved: true })).toBe(100);
+  });
+});
+
+describe("前の期間", () => {
+  const now = new Date("2026-11-14T12:00:00Z"); // 土曜（日本時間）
+  const rows = [
+    row("2026-11-03T00:00:00Z", 40), // 先週の火曜
+    row("2026-10-20T00:00:00Z", 25), // 先月
+    row("2026-11-10T00:00:00Z", 10), // 今週
+  ];
+
+  it("先週・先月の範囲と見出し", () => {
+    expect(periodRange("week", "2026-11-14", -1)).toEqual({ start: "2026-11-02", end: "2026-11-08" });
+    expect(periodRange("month", "2026-11-14", -1)).toEqual({ start: "2026-10-01", end: "2026-10-31" });
+    expect(periodRange("month", "2026-01-14", -1)).toEqual({ start: "2025-12-01", end: "2025-12-31" });
+    expect(periodLabel("week", now, -1)).toBe("先週");
+    expect(periodLabel("week", now, -2)).toBe("10月26日〜11月1日");
+    expect(periodLabel("month", now, -1)).toBe("先月");
+    expect(periodLabel("month", now, -11)).toBe("2025年12月");
+  });
+
+  it("先週は先週のぶんだけ数え、棒は7本", () => {
+    const r = buildInsights(rows, "week", now, -1);
+    expect(r.bars).toHaveLength(7);
+    expect(r.total).toBe(40);
+    expect(r.bars[1].minutes).toBe(40);
+  });
+
+  it("先月は月末まで日ごとの棒を出す", () => {
+    const r = buildInsights(rows, "month", now, -1);
+    expect(r.bars).toHaveLength(31);
+    expect(r.total).toBe(25);
+  });
+
+  it("約400日より前にはさかのぼれない", () => {
+    expect(canGoBack("week", now, 0)).toBe(true);
+    expect(canGoBack("year", now, 0)).toBe(true);
+    expect(canGoBack("year", now, -1)).toBe(false);
   });
 });

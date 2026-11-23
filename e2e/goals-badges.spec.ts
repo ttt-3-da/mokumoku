@@ -11,6 +11,18 @@ test("スマホの縦持ちでは ☰ から左にメニューが出る", async 
   await expect(page).toHaveURL(/\/timeline/);
   await expect(menu).not.toBeInViewport();
   await expect(page.getByRole("heading", { name: "ふり返り" })).toBeVisible();
+
+  // 先週・先月にさかのぼれる
+  await page.getByRole("tab", { name: "今週" }).click();
+  await expect(page.getByRole("button", { name: "次の期間" })).toBeDisabled();
+  await page.getByRole("button", { name: "前の期間" }).click();
+  await expect(page.getByText("先週", { exact: true })).toBeVisible();
+  await expect(page.getByText("合計", { exact: true })).toBeVisible();
+  await page.getByRole("tab", { name: "今月" }).click();
+  await page.getByRole("button", { name: "前の期間" }).click();
+  await expect(page.getByText("先月", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "次の期間" }).click();
+  await expect(page.getByRole("button", { name: "次の期間" })).toBeDisabled();
 });
 
 test("週の目標・ダークモード・バッジ", async ({ page }) => {
