@@ -245,6 +245,7 @@ export const HEAD_ITEMS = {
   headphones: "ヘッドホン",
   mahou: "魔法の帽子",
   tenshi: "天使の輪",
+  silkhat: "紳士のハット",
 } as const;
 
 export const DESK_ITEMS = {

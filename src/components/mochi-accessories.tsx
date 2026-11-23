@@ -12,7 +12,7 @@ const STROKE = 2.6;
 
 export const EXTRA_HEADS = new Set([
   "ahoge", "odango", "bigribbon", "nekomimi", "usamimi", "kumamimi", "chonmage", "beret",
-  "knit", "tsuno", "mugiwara", "hanakanmuri", "headphones", "mahou", "tenshi",
+  "knit", "tsuno", "mugiwara", "hanakanmuri", "headphones", "mahou", "tenshi", "silkhat",
 ]);
 
 /** 体の上の縁（頭のてっぺん付近）の y 座標 */
@@ -166,6 +166,17 @@ export function ExtraHead({
           <ellipse cx="50" cy="38" rx="26" ry="5.5" fill="#5a4190" />
           <path d="M37 34 Q50 37 63 34 L64 37.5 Q50 40.5 36 37.5 Z" fill="#ffd34d" />
           <path d={starPath(55, 22, 3.6)} fill="#ffd34d" />
+        </g>
+      );
+    case "silkhat":
+      // 紳士のハット：赤いシルクハットに黒いリボン
+      return (
+        <g>
+          <ellipse cx="50" cy="37" rx="25" ry="5.5" fill="#b8282e" stroke="#8f1d22" strokeWidth="1.4" />
+          <path d="M36 36 L37.5 12 Q50 9.5 62.5 12 L64 36 Q50 39 36 36 Z" fill="#d33a3f" stroke="#8f1d22" strokeWidth="1.4" strokeLinejoin="round" />
+          <ellipse cx="50" cy="12" rx="12.5" ry="2.6" fill="#e2585c" stroke="#8f1d22" strokeWidth="1.2" />
+          <path d="M36.6 29 Q50 31.6 63.4 29 L63.8 34.6 Q50 37.4 36.2 34.6 Z" fill="#2b2326" />
+          <path d="M41 14 L40 27" stroke="#f08a8d" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
         </g>
       );
     case "tenshi":

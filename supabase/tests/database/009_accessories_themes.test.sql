@@ -12,7 +12,7 @@ $$;
 insert into auth.users (id, email, raw_user_meta_data) values
   ('00000000-0000-0000-0000-0000000007a1', 'acc_amy2@users.mokumoku.invalid', '{"username":"acc_amy2"}');
 
-select is((select count(*)::int from public.shop_items where kind in ('head', 'neck', 'desk')), 30, 'アクセサリーが30種売られている');
+select is((select count(*)::int from public.shop_items where kind in ('head', 'neck', 'desk')), 31, 'アクセサリーが31種売られている（紳士のハットを足した）');
 select is((select count(*)::int from public.shop_items where kind = 'theme'), 17, 'テーマは今ある2つ＋新しく15');
 
 select pg_temp.login('00000000-0000-0000-0000-0000000007a1');
